@@ -25,6 +25,7 @@ import choral.ast.CompilationUnit;
 import choral.ast.Position;
 import choral.compiler.*;
 import choral.compiler.Compiler;
+import choral.compiler.knowledge.KnowledgeInjector;
 import choral.exceptions.AstPositionedException;
 import choral.exceptions.ChoralCompoundException;
 import choral.exceptions.ChoralException;
@@ -152,6 +153,7 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 						.collect( Collectors.toList() );
 				Collection< CompilationUnit > sourceUnits = sourceFiles.stream().map(
 						wrapFunction( Parser::parseSourceFile ) ).collect( Collectors.toList() );
+				sourceUnits.add( Parser.parseSourceFile( Thread.currentThread().getContextClassLoader().getResourceAsStream( "choice/Choice.ch" ), "Choice.ch" ) );
 				Collection< CompilationUnit > headerUnits = Stream.concat(
 						HeaderLoader.loadStandardProfile(),
 						HeaderLoader.loadFromPath(
@@ -163,6 +165,9 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				AtomicReference< Collection< CompilationUnit > > annotatedUnits = new AtomicReference<>();
 				profilerLog( "typechecking", () -> annotatedUnits.set( Typer.annotate( sourceUnits,
 						headerUnits ) ) );
+
+				annotatedUnits.set( KnowledgeInjector.inject( annotatedUnits.get() ) );
+				Typer.annotate( annotatedUnits.get(), headerUnits );
 
 				profilerLog( "projectability check", () -> Compiler.checkProjectiability( annotatedUnits.get() ) );
 
@@ -191,6 +196,7 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 						}
 				);
 			} catch( Exception e ) {
+				e.printStackTrace();
 				printNiceErrorMessage( e, verbosityOptions.verbosity() );
 				System.out.println( "compilation failed." );
 				return 1;
