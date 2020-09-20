@@ -8,19 +8,20 @@ import org.choral.ast.statement.Statement;
 import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
-import org.choral.ast.visitors.PrettyPrinterVisitor;
+import org.choral.compiler.Typer;
 import org.choral.compiler.merge.MergeException;
 import org.choral.compiler.merge.StatementsMerger;
 import org.choral.compiler.soloist.StatementsProjector;
-import org.choral.types.*;
-import org.choral.types.Package;
+import org.choral.types.GroundDataType;
+import org.choral.types.World;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class KnowledgeInjector extends ChoralVisitor {
 
-	private final SeenRoles seenRoles = new SeenRoles();
+	private final RoleScopes roleScopes = new RoleScopes();
+	private final boolean addImport;
 	private final static String SELECT = "select";
 	private final static String ENUMIMPORT = "choral.choice.Choice";
 	private final static String ENUM = "Choice";
@@ -28,31 +29,31 @@ public class KnowledgeInjector extends ChoralVisitor {
 	private final static String R = "R";
 	private final static String AUTOPOSTEXT = "Auto generated";
 
-	private KnowledgeInjector() {}
+	private KnowledgeInjector(boolean addImport) {
+		this.addImport = addImport;
+	}
 
-	public static Collection<CompilationUnit> inject( Collection< CompilationUnit > compilationUnits ){
-		List<CompilationUnit> l = compilationUnits.stream()
-				.map( cu -> (CompilationUnit) new KnowledgeInjector().visit( cu ) )
-				.collect(Collectors.toList());
-		PrettyPrinterVisitor ppv = new PrettyPrinterVisitor();
-		l.forEach( cu -> System.out.println(ppv.visit( cu )) );
-		return l;
+	public static Collection<CompilationUnit> inject( Collection< CompilationUnit > compilationUnits, Collection< CompilationUnit > headerUnits ){
+		Collection< CompilationUnit > cus = compilationUnits;
+		for( int i = 0; i < 50; i++ ) {
+			KnowledgeInjector injector = new KnowledgeInjector( i == 0 );
+			cus = cus.stream()
+					.map( cu -> (CompilationUnit) injector.visit( cu ) )
+					.collect(Collectors.toList());
+			Typer.annotate( cus, headerUnits );
+			if( !injector.roleScopes.isModified() ){
+				break;
+			}
+		}
+		return cus;
 	}
 
 	@Override
 	public Node visit( CompilationUnit n ) {
-
-		/*try {
-			System.out.println(((ExpressionStatement)n.classes().get( 0 ).methods().get( 0 ).body().get()).expression().typeAnnotation().get());
-			Universe u = new Universe();
-			System.out.println(new HigherEnum( u.rootPackage(), EnumSet.noneOf( Modifier.class ), "", new World( u ,"B" ) ));
-			System.out.println("kage");
-		}catch( Exception e ){
-
-		}*/
-
 		CompilationUnit copy = (CompilationUnit) super.visit( n );
-		copy.imports().add( new ImportDeclaration( ENUMIMPORT, generatedPosition() ) );
+		if( addImport ){
+			copy.imports().add( new ImportDeclaration( ENUMIMPORT, generatedPosition() ) );
+		}
 		return copy;
 	}
 
@@ -60,59 +61,51 @@ public class KnowledgeInjector extends ChoralVisitor {
 	public Node visit( IfStatement n ) {
 		String choosingRole = getRole( n.condition() );
 
-		n.condition().accept( this );
+		//Expression conditionCopy = (Expression) n.condition().accept( this );
+		Expression conditionCopy = (Expression) this.visit( n.condition() );
 
-		seenRoles.scope();
-		Statement ifBranchOg = (Statement) n.ifBranch().accept( this );
-		Set< String > ifRoles = seenRoles.getRoles();
-		seenRoles.exitScope();
+		roleScopes.scope( choosingRole );
+		Statement ifBranch = (Statement) n.ifBranch().accept( this );
+		RoleScope ifRoles = roleScopes.getRoles();
+		boolean childScopesModified = roleScopes.isModified();
+		roleScopes.exitScope();
 
-		seenRoles.scope();
-		Statement elseBranchOg = (Statement) n.elseBranch().accept( this );
-		Set< String > elseRoles = seenRoles.getRoles();
-		seenRoles.exitScope();
+		roleScopes.scope( choosingRole );
+		Statement elseBranch = (Statement) n.elseBranch().accept( this );
+		RoleScope elseRoles = roleScopes.getRoles();
+		childScopesModified |= roleScopes.isModified();
+		roleScopes.exitScope();
 
-		ifRoles.remove( choosingRole );
-		elseRoles.remove( choosingRole );
+		if( !childScopesModified ) {
+			for( String role : ifRoles.roles() ) {
+				if( !elseRoles.contains( role ) || !mergeable( role, n.ifBranch(), n.elseBranch() ) ) {
+					String channel = getChannel( role, choosingRole );
+					ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
+					elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
+					roleScopes.mark();
+				}
+			}
 
-		System.out.println(choosingRole);
-		System.out.println(ifRoles);
-		System.out.println(elseRoles);
-
-		Statement ifBranch = ifBranchOg;
-		Statement elseBranch = elseBranchOg;
-
-		for( String role : ifRoles ){
-			if( !elseRoles.contains( role ) ){
-				ifBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, L, ifBranch );
-				elseBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, R, elseBranch );
-			}else{
-				try {
-					StatementsMerger.merge( Arrays.asList(
-							StatementsProjector.visit( new WorldArgument( new Name( role ) ) , ifBranchOg ),
-							StatementsProjector.visit( new WorldArgument( new Name( role ) ) , elseBranchOg ))
-					);
-				}catch( MergeException e ){
-					ifBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, L, ifBranch );
-					elseBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, R, elseBranch );
+			for( String role : elseRoles.roles() ) {
+				if( !ifRoles.contains( role ) ) {
+					String channel = getChannel( role, choosingRole );
+					ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
+					elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
+					roleScopes.mark();
 				}
 			}
 		}
 
-		for( String role : elseRoles ){
-			if( !ifRoles.contains( role ) ){
-				ifBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, L, ifBranch );
-				elseBranch = createSelectStatement( getChannel( role, choosingRole ), choosingRole, R, elseBranch );
-			}
-		}
 
-		return new IfStatement(
-				(Expression) n.condition().accept( this ),
+		IfStatement ifStatement = new IfStatement(
+				conditionCopy,
 				ifBranch,
 				elseBranch,
 				(Statement) n.continuation().accept( this ),
 				n.position()
 		);
+
+		return ifStatement;
 	}
 
 	@Override
@@ -122,36 +115,61 @@ public class KnowledgeInjector extends ChoralVisitor {
 	}
 
 	@Override
-	public Node visit( LiteralExpression.BooleanLiteralExpression n ) {
+	public Node visit( Expression n ) {
 		collectRoles( n );
 		return super.visit( n );
 	}
 
 	@Override
+	public Node visit( TypeExpression n ) {
+		if( n.typeAnnotation().isPresent() ) {
+			try {
+				roleScopes.addRoles( ( (GroundDataType) n.typeAnnotation().get() ).worldArguments()
+						.stream().map( World::identifier )
+						.collect( Collectors.toList() ) );
+			}catch( ClassCastException ignored ){}
+		}
+		return super.visit( n );
+	}
+
+	@Override
 	public Node visit( MethodCallExpression n ) {
-		/*System.out.println("MethodCallExpression " + n.name());
-		if( !n.methodAnnotation().get().returnType().isVoid() )
-			System.out.println(((GroundDataType) n.methodAnnotation().get().returnType())
-					.worldArguments().stream().map( World::identifier )
-					.collect( Collectors.toList()));
-		 */
-		//TODO check the callee roles
+		roleScopes.addRoles( n.methodAnnotation().get().higherCallable().declarationContext()
+				.worldArguments().stream().map( World::identifier )
+				.collect( Collectors.toList()) );
 		if( !n.methodAnnotation().get().returnType().isVoid() ){
-			seenRoles.addRoles( ((GroundDataType) n.methodAnnotation().get().returnType())
+			roleScopes.addRoles( ((GroundDataType) n.methodAnnotation().get().returnType())
 					.worldArguments().stream().map( World::identifier )
 					.collect( Collectors.toList()) );
 		}
 		return super.visit( n );
 	}
 
+	private boolean mergeable(String role, Statement statement1, Statement statement2){
+		try {
+			WorldArgument pRole = new WorldArgument( new Name( role ) );
+			StatementsMerger.merge( Arrays.asList(
+					StatementsProjector.visit( pRole, statement1 ),
+					StatementsProjector.visit( pRole, statement2 ) )
+			);
+			return true;
+		} catch( MergeException e ) {
+			return false;
+		}
+	}
+
 	private void collectRoles(Expression n){
-		seenRoles.addRoles( ((GroundDataType) n.typeAnnotation().get()).worldArguments()
+		roleScopes.addRoles( ((GroundDataType) n.typeAnnotation().get()).worldArguments()
 				.stream().map( World::identifier )
 				.collect( Collectors.toList()) );
 	}
 
 	private String getRole( Expression e ){
-		return ((GroundDataType) e.typeAnnotation().get()).worldArguments().get(0).identifier();
+		if( e instanceof MethodCallExpression ){
+			return ((GroundDataType) ((MethodCallExpression) e).methodAnnotation().get().returnType()).worldArguments().get( 0 ).identifier();
+		}
+		return ((GroundDataType) e.typeAnnotation().get()).worldArguments().get( 0 ).identifier();
+
 	}
 
 	private String getChannel( String role1, String role2 ){
@@ -166,12 +184,9 @@ public class KnowledgeInjector extends ChoralVisitor {
 
 	private static ExpressionStatement createSelectStatement( String channel, String sender, String Label, Statement continuation ){
 
-		FieldAccessExpression fae = new FieldAccessExpression( new Name( channel ), generatedPosition() );
-		//fae.setTypeAnnotation( new HigherEnum(  ) );
-
 		return new ExpressionStatement(
 				new ScopedExpression(
-						fae,
+						new FieldAccessExpression( new Name( channel ), generatedPosition() ),
 						new MethodCallExpression(
 								new Name( SELECT ),
 								Collections.singletonList(
@@ -202,36 +217,90 @@ public class KnowledgeInjector extends ChoralVisitor {
 		return new Position( AUTOPOSTEXT, 0, 0 );
 	}
 
-	private static class SeenRoles{
+	private static class RoleScopes{
 
-		final List< Set< String > > roleGroups;
+		final Deque< RoleScope > scopes;
 
-		public SeenRoles( ) {
-			this.roleGroups = new LinkedList<>();
-			this.roleGroups.add( new HashSet<>() );
+		public RoleScopes( ) {
+			scopes = new ArrayDeque<>();
+			scopes.add( new RoleScope() );
 		}
 
 		void addRole( String r ){
-			roleGroups.get( 0 ).add( r );
+			scopes.getFirst().addRole( r );
 		}
 
 		void addRoles( Collection< String > rs ){
-			roleGroups.get( 0 ).addAll( rs );
+			scopes.getFirst().addRoles( rs );
 		}
 
-		void scope(){
-			roleGroups.add( 0, new HashSet<>() );
+		void scope( String owner ){
+			scopes.addFirst( new RoleScope( owner ) );
 		}
 
 		void exitScope(){
-			assert roleGroups.size() >= 2;
-			Set< String > prevHead = roleGroups.remove( 0 );
-			roleGroups.get( 0 ).addAll( prevHead );
+			RoleScope prevHead = scopes.removeFirst();
+			scopes.getFirst().addRoles( prevHead.roles() );
+			if( prevHead.isModified() ) {
+				scopes.getFirst().mark();
+			}
 		}
 
-		Set< String > getRoles(){
-			return roleGroups.get( 0 );
+		RoleScope getRoles(){
+			return scopes.getFirst();
 		}
 
+		void mark(){
+			scopes.getFirst().mark();
+		}
+
+		boolean isModified() {
+			return scopes.getFirst().isModified();
+		}
+	}
+
+	private static class RoleScope{
+		Set< String > roles;
+		boolean modified;
+		String owner;
+
+		RoleScope(String owner) {
+			this.roles = new HashSet<>();
+			this.modified = false;
+			this.owner = owner;
+		}
+
+		RoleScope() {
+			this.roles = new HashSet<>();
+			this.modified = false;
+			this.owner = "";
+		}
+
+		void mark(){
+			modified = true;
+		}
+
+		boolean isModified() {
+			return modified;
+		}
+
+		Collection< String > roles(){
+			return roles;
+		}
+
+		void addRole( String r ){
+			if( !r.equals( owner ) ){
+				roles.add( r );
+			}
+		}
+
+		void addRoles( Collection< String > rs ){
+			roles.addAll( rs );
+			roles.remove( owner );
+		}
+
+		boolean contains( String role ){
+			return roles.contains( role );
+		}
 	}
 }

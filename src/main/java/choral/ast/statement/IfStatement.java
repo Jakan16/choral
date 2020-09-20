@@ -80,11 +80,17 @@ public class IfStatement extends Statement {
 		try {
 			return m.merge( this, ( this.getClass().cast( n ) ) );
 		} catch( ClassCastException e ) {
-			throw new ChoralException(
-					this.position().line() + ":"
-							+ this.position().column() + ":"
-							+ "error: Could not merge \n" + new PrettyPrinterVisitor().visit(
-							this ) + "\n with " + n.getClass().getSimpleName() );
+			if( this.position() != null ) {
+				throw new ChoralException(
+						this.position().line() + ":"
+								+ this.position().column() + ":"
+								+ "error: Could not merge \n" + new PrettyPrinterVisitor().visit(
+								this ) + "\n with " + n.getClass().getSimpleName() );
+			}else{
+				throw new ChoralException("error: Could not merge \n" +
+						new PrettyPrinterVisitor().visit( this ) +
+						"\n with " + n.getClass().getSimpleName() );
+			}
 		}
 	}
 
