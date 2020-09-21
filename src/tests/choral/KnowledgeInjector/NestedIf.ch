@@ -4,7 +4,7 @@ import org.choral.channels.SymChannel;
 
 public class NestedIf@( A, B, C ) {
 	public static void nested( SymChannel@( A, B )< Object > ch_A_B, SymChannel@( A, C )< Object > ch_A_C, SymChannel@( B, C )< Object > ch_B_C ){
-/*
+
     boolean@A bool = true@A;
     boolean@B bool2 = false@B;
     if (bool2){
@@ -22,7 +22,7 @@ public class NestedIf@( A, B, C ) {
         System@A.out.println("A2"@A);
       }
     }
-*/
+
     if(true@A){
       if(true@B){
         System@C.out.println("C"@C);
@@ -35,7 +35,7 @@ public class NestedIf@( A, B, C ) {
       }
     }
 
-/*
+
     if(true@A){
       if(true@B){
         System@C.out.println("C"@C);
@@ -88,7 +88,7 @@ public class NestedIf@( A, B, C ) {
           if(true@B){
             System@C.out.println("C"@C);
           }
-    }
+        }
 
 		if(true@A){
 			String@B b;
@@ -125,7 +125,11 @@ public class NestedIf@( A, B, C ) {
 				System@A.out.println("A"@A);
 			}
 		}
-		*/
+
+        if(true@A){
+            new OtherClass@(A,B)();
+        }
+
   }
 
 	public static void testFunc(String@A a, String@B b){}

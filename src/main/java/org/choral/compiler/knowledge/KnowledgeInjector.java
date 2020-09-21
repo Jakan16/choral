@@ -159,9 +159,11 @@ public class KnowledgeInjector extends ChoralVisitor {
 	}
 
 	private void collectRoles(Expression n){
-		roleScopes.addRoles( ((GroundDataType) n.typeAnnotation().get()).worldArguments()
-				.stream().map( World::identifier )
-				.collect( Collectors.toList()) );
+		if( n.typeAnnotation().isPresent() ) {
+			roleScopes.addRoles( ( (GroundDataType) n.typeAnnotation().get() ).worldArguments()
+					.stream().map( World::identifier )
+					.collect( Collectors.toList() ) );
+		}
 	}
 
 	private String getRole( Expression e ){
