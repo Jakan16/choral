@@ -1,9 +1,11 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
+import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.symboltable.Template;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class TypeDNode extends DNode{
 
@@ -16,6 +18,12 @@ public class TypeDNode extends DNode{
 		this.tem = tem;
 		this.roles = roles;
 		this.typeArguments = typeArguments;
+	}
+
+	public TypeDNode copyWithMapping( Map< String, String > roleMap ){
+		List< String > roles = Mapper.map( this.roles, roleMap::get );
+		assert !roles.contains( null );
+		return new TypeDNode( this.tem, roles, this.typeArguments );
 	}
 
 	public Template getTem() {
@@ -42,6 +50,6 @@ public class TypeDNode extends DNode{
 
 	@Override
 	public String toString() {
-		return getName() + "@(" + String.join( ", ", roles ) + ") " + super.toString();
+		return getName() + "@(" + String.join( ", ", roles ) + ")";
 	}
 }

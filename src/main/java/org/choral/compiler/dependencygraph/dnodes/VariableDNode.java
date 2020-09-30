@@ -25,6 +25,6 @@ public class VariableDNode extends DNode {
 
 	@Override
 	public String toString() {
-		return getName() + "@(" + String.join( ", ", roles ) + ")";
+		return "VariableNode " + getName() + "@(" + String.join( ", ", roles ) + ") " + type.toString();
 	}
 }

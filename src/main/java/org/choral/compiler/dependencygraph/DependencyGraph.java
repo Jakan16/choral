@@ -26,7 +26,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	public DependencyGraph( Collection< CompilationUnit > cus,
 							Collection< CompilationUnit > headerUnits ) {
-		this.context = new Context( cus, headerUnits, this );
+		this.context = new Context( cus, headerUnits );
 	}
 
 	public static void walk(
@@ -193,7 +193,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( FieldAccessExpression n ) {
-		return Collections.singletonList( context.resolveIdentifier(n.name().identifier()) );
+		return Collections.singletonList( context.resolveIdentifier( n.name().identifier() ) );
 	}
 
 	@Override
@@ -203,9 +203,21 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( MethodCallExpression n ) {
-		MethodSignature sig = context.getMethod( n.name().identifier(), n.arguments().size() ).signature();
-		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ), (TypeDNode) sig.returnType().accept( this ).get( 0 ) );
-		node.setRole( context.mapRoles( sig.returnType().worldArguments() ) );
+		/*Template.MethodSignature sig = context.getMethodSig( n.name().identifier(), n.arguments().size() );
+		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
+				sig.getReturnType().copyWithMapping( context.getContextFrame().roleMap ),
+				Mapper.map( sig.getParameters(), p -> p.copyWithMapping( context.getContextFrame().roleMap ) ) );
+		node.setRole( context.mapRoles( sig.getReturnType().getRoles() ) );
+		return Collections.singletonList( node );*/
+
+		Template.MethodSignature sig = context.getTem().getMethodSig( n.name().identifier(), n.arguments().size() );
+
+		TypeDNode mappedReturnType = context.mapType( sig.getReturnType() );
+
+		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
+				mappedReturnType,
+				Mapper.map( sig.getParameters(), context::mapType ) );
+		node.setRole( mappedReturnType.getRoles() );
 		return Collections.singletonList( node );
 	}
 
@@ -237,7 +249,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( NullExpression n ) {
 		LiteralDNode node = new LiteralDNode( "NullExpression" );
-		node.setRole( context.mapRoles( n.worlds() ) );
+		node.setRole( mapWorldToString( n.worlds() ) );
 		return Collections.singletonList( node );
 	}
 
@@ -300,7 +312,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( FormalMethodParameter n ) {
 		context.addSymbol( n.name().identifier(),
-				context.mapRoles( n.type().worldArguments() ),
+				mapWorldToString( n.type().worldArguments() ),
 				(TypeDNode) n.type().accept( this ).get( 0 ));
 		return Collections.emptyList();
 	}
@@ -338,7 +350,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( VariableDeclaration n ) {
 		context.addSymbol( n.name().identifier(),
-				context.mapRoles( n.type().worldArguments() ),
+				mapWorldToString( n.type().worldArguments() ),
 				(TypeDNode) n.type().accept( this ).get( 0 ));
 		return Collections.emptyList();
 	}
@@ -354,13 +366,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		if( type != null ){
 			assert typeArgs.size() == 0;
 			return Collections.singletonList(
-					new TypeDNode( type.getTem(), context.mapRoles( n.worldArguments() ),
+					new TypeDNode( type.getTem(), mapWorldToString( n.worldArguments() ),
 							type.getTypeArguments() ) );
 		}
 
 		return Collections.singletonList(
 				new TypeDNode( context.getContextFrame().resolveIdentifier( n.name().identifier() ),
-				context.mapRoles( n.worldArguments() ), typeArgs ) );
+				mapWorldToString( n.worldArguments() ), typeArgs ) );
 	}
 
 	@Override
@@ -383,37 +395,29 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		throw new UnsupportedOperationException();
 	}
 
+	public List< String > mapWorldToString( List< WorldArgument > worldArguments ){
+		return Mapper.map( worldArguments, w -> w.name().identifier() );
+	}
+
 	private static class ContextFrame {
 		private final Template tem;
-		private final Map< String, String > roleMap = new HashMap<>();
-		private final Map< String, TypeDNode > genericMap = new HashMap<>();
+		private final Map< String, String > roleMap;
+		private final Map< String, TypeDNode > genericMap;
 
 		public ContextFrame( Template tem ) {
 			assert tem != null;
 			this.tem = tem;
 
-			for( int i = 0; i < tem.worldParameters().size(); i++ ) {
-				String identifier = tem.worldParameters().get( i ).toWorldArgument().name().identifier();
-				roleMap.put( identifier, identifier );
-			}
+			roleMap = Mapper.idMap( tem.worldParameters(), w -> w.toWorldArgument().name().identifier() );
+			genericMap = new HashMap<>();
 		}
 
 		public ContextFrame( Template tem, List< String > roles, List< TypeDNode > typeArgs ) {
 			assert tem != null;
 			this.tem = tem;
 
-			assert tem.worldParameters().size() == roles.size();
-			for( int i = 0; i < roles.size(); i++ ) {
-				roleMap.put(
-						tem.worldParameters().get( i ).toWorldArgument().name().identifier(),
-						roles.get( i ) );
-			}
-
-			List< FormalTypeParameter > typeParameters = tem.typeParameters();
-			for( int i = 0, typeParametersSize = typeParameters.size(); i < typeParametersSize; i++ ) {
-				FormalTypeParameter typeParameter = typeParameters.get( i );
-				genericMap.put( typeParameter.name().identifier(), typeArgs.get( i ) );
-			}
+			roleMap = Mapper.createMap( tem.worldParameters(), roles, w -> w.toWorldArgument().name().identifier(), Mapper.id() );
+			genericMap = Mapper.createMap( tem.typeParameters(), typeArgs, t -> t.name().identifier(), Mapper.id() );
 		}
 
 		public Template resolveIdentifier( String identifier ) {
@@ -429,22 +433,23 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		private final SymbolTable symbolTable;
 		private final Deque< ContextFrame > contextFrames;
 		private final PackageHandler packageHandler;
-		private final DependencyGraph visitor;
 
-		public Context(Collection< CompilationUnit > cus,
-					   Collection< CompilationUnit > headerUnits,
-					   DependencyGraph visitor
+		public Context(
+				Collection< CompilationUnit > cus,
+				Collection< CompilationUnit > headerUnits
 		) {
 			this.packageHandler = new PackageHandler( cus, headerUnits );
 			this.symbolTable = new SymbolTable();
 			this.contextFrames = new ArrayDeque<>();
-			this.visitor = visitor;
 		}
 
-		public List< String > mapRoles( List< WorldArgument > worldArguments ){
-			final ContextFrame frame = getContextFrame();
-			return worldArguments.stream().map( w -> frame.roleMap.get( w.name().identifier() ) )
-					.collect( Collectors.toList() );
+		private TypeDNode mapType( TypeDNode type ){
+			if( type.getTem().isGeneric() ){
+				TypeDNode replaceType = getContextFrame().genericMap.get( type.getName() );
+				return new TypeDNode( replaceType.getTem(), Mapper.map( type.getRoles(), getContextFrame().roleMap::get ), replaceType.getTypeArguments() );
+			}else{
+				return type.copyWithMapping( getContextFrame().roleMap );
+			}
 		}
 
 		private Template getTemplate( String packagePath, Class c ){
@@ -488,7 +493,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return frame;
 		}
 
-		public Template getClassDef() {
+		public Template getTem() {
 			return getContextFrame().tem;
 		}
 
@@ -500,21 +505,11 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 				}
 			}
 
-			Field field = getClassDef().getField( identifier );
+			VariableDNode field = getTem().getField( identifier );
 			if( field != null ){
-				return field.typeExpression().accept( this.visitor ).get( 0 );
+				return field;
 			}
 
-			throw new IllegalStateException();
-		}
-
-		public MethodDefinition getMethod( String name, int numArgs ){
-			for( MethodDefinition methodDefinition: this.getClassDef().getMethodDefs() ){
-				if( methodDefinition.signature().name().identifier().equals( name ) &&
-					methodDefinition.signature().parameters().size() == numArgs ) {
-					return methodDefinition;
-				}
-			}
 			throw new IllegalStateException();
 		}
 
@@ -524,7 +519,6 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			}else {
 				TypeDNode t = node.getType();
 				Template tem = t.getTem();
-				assert tem != null;
 				pushFrame( tem, t.getRoles(), t.getTypeArguments() );
 			}
 		}
