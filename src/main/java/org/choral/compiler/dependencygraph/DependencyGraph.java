@@ -203,17 +203,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( MethodCallExpression n ) {
-		/*Template.MethodSignature sig = context.getMethodSig( n.name().identifier(), n.arguments().size() );
-		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
-				sig.getReturnType().copyWithMapping( context.getContextFrame().roleMap ),
-				Mapper.map( sig.getParameters(), p -> p.copyWithMapping( context.getContextFrame().roleMap ) ) );
-		node.setRole( context.mapRoles( sig.getReturnType().getRoles() ) );
-		return Collections.singletonList( node );*/
-
 		Template.MethodSignature sig = context.getTem().getMethodSig( n.name().identifier(), n.arguments().size() );
-
 		TypeDNode mappedReturnType = context.mapType( sig.getReturnType() );
-
 		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
 				mappedReturnType,
 				Mapper.map( sig.getParameters(), context::mapType ) );
@@ -223,7 +214,9 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( ClassInstantiationExpression n ) {
-		throw new UnsupportedOperationException();
+		List< DNode > dependencies = visitAndCollect( n.arguments() );
+		TypeDNode type = (TypeDNode) n.typeExpression().accept( this ).get( 0 );
+		return Collections.singletonList( new ClassInstantiationDNode( dependencies, type.getName(), type ) );
 	}
 
 	@Override
