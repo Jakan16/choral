@@ -507,7 +507,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 			VariableDNode field = getTem().getField( identifier );
 			if( field != null ){
-				return field;
+				TypeDNode type = mapType( field.getType() );
+				return new VariableDNode( field.getName(), type.getRoles(), type );
 			}
 
 			throw new IllegalStateException();
