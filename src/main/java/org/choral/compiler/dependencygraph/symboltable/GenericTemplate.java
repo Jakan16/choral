@@ -27,6 +27,10 @@ public class GenericTemplate extends Template {
 
 	@Override
 	public List< TypeDNode > prepareSuperType() {
+		if( parameter.upperBound().isEmpty() ){
+			return Collections.emptyList();
+		}
+		assert parameter.upperBound().size() == 1;
 		return Collections.singletonList( typeExpressionToNode( parameter.upperBound().get( 0 ) ) );
 	}
 
