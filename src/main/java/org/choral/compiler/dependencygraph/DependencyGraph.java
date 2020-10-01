@@ -409,8 +409,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			assert tem != null;
 			this.tem = tem;
 
-			roleMap = Mapper.createMap( tem.worldParameters(), roles, w -> w.toWorldArgument().name().identifier(), Mapper.id() );
-			genericMap = Mapper.createMap( tem.typeParameters(), typeArgs, t -> t.name().identifier(), Mapper.id() );
+			roleMap = Mapper.mapping( tem.worldParameters(), roles, w -> w.toWorldArgument().name().identifier(), Mapper.id() );
+			genericMap = Mapper.mapping( tem.typeParameters(), typeArgs, t -> t.name().identifier(), Mapper.id() );
 		}
 
 		public Template resolveIdentifier( String identifier ) {

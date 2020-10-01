@@ -11,7 +11,7 @@ public class Mapper {
 
 	private static final Function< ?, ? > identityFunction = v -> v;
 
-	public static < K, V > Map< K, V > createMap(Iterable< K > from, Iterable< V > to){
+	public static < K, V > Map< K, V > mapping( Iterable< K > from, Iterable< V > to){
 		Map< K, V > map = new HashMap<>();
 		Iterator<V> vIterator = to.iterator();
 		from.forEach( f -> {
@@ -22,13 +22,20 @@ public class Mapper {
 		return map;
 	}
 
-	public static < K, V, K2, V2 > Map< K, V > createMap( Iterable< K2 > from, Iterable< V2 > to, Function< K2, K > kMap, Function<V2, V> vMap ){
+	public static < K, V, K2, V2 > Map< K, V > mapping( Iterable< K2 > from, Iterable< V2 > to, Function< K2, K > kMap, Function<V2, V> vMap ){
 		Map< K, V > map = new HashMap<>();
 		Iterator<V2> vIterator = to.iterator();
 		from.forEach( k -> {
 			assert vIterator.hasNext();
 			map.put( kMap.apply( k ), vMap.apply( vIterator.next() ) );
 		} );
+
+		return map;
+	}
+
+	public static < K, V, K2 > Map< K, V > mapping( Iterable< K2 > fromTo, Function< K2, K > kMap, Function<K2, V> vMap ){
+		Map< K, V > map = new HashMap<>();
+		fromTo.forEach( k -> map.put( kMap.apply( k ), vMap.apply( k ) ) );
 
 		return map;
 	}

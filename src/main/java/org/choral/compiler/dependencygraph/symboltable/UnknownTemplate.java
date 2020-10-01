@@ -1,8 +1,11 @@
 package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.ast.Name;
+import org.choral.ast.body.Field;
+import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
+import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
 import org.choral.compiler.dependencygraph.dnodes.VariableDNode;
 
 import java.util.Collections;
@@ -14,6 +17,11 @@ public class UnknownTemplate extends Template {
 
 	public static Template unknownTemplate() {
 		return unknownTemplate;
+	}
+
+	@Override
+	public List< TypeDNode > prepareSuperType() {
+		return Collections.emptyList();
 	}
 
 	private final List< FormalWorldParameter > worldParams;
@@ -50,6 +58,16 @@ public class UnknownTemplate extends Template {
 
 	@Override
 	public List< FormalTypeParameter > typeParameters() {
+		return Collections.emptyList();
+	}
+
+	@Override
+	public List< ? extends MethodDefinition > methodDefinitions() {
+		return Collections.emptyList();
+	}
+
+	@Override
+	public List< Field > fields() {
 		return Collections.emptyList();
 	}
 }
