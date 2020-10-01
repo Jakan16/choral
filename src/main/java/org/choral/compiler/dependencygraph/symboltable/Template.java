@@ -61,17 +61,13 @@ public abstract class Template {
 	private List< VariableDNode > deriveFields(){
 		prepare();
 
-		List< VariableDNode > fields = Mapper.map( fields(), f -> {
-			TypeDNode type = typeExpressionToNode( f.typeExpression() );
-			return new VariableDNode( f.name().identifier(), type.getRoles(), type );
-		} );
+		List< VariableDNode > fields = Mapper.map( fields(), f -> new VariableDNode( f.name().identifier(), typeExpressionToNode( f.typeExpression() ) ) );
 
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
 			int index = i;
-			this.superTypes.get( i ).getTem().getFields().stream().map( v -> {
-				TypeDNode mappedType = mapType( v.getType(), index );
-				return new VariableDNode( v.getName(), mappedType.getRoles(), mappedType );
-			} ).forEach( fields::add );
+			this.superTypes.get( i ).getTem().getFields().stream()
+					.map( v -> new VariableDNode( v.getName(), mapType( v.getType(), index ) ) )
+					.forEach( fields::add );
 		}
 
 		return fields;

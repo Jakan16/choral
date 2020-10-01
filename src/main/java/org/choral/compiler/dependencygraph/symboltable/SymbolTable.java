@@ -27,9 +27,9 @@ public class SymbolTable {
 		return null;
 	}
 
-	public void addSymbol( String identifier, List< String > roles, TypeDNode type ){
+	public void addSymbol( String identifier, TypeDNode type ){
 		assert getSymbol( identifier ) == null;
-		currentScope().addSymbol( new VariableDNode( identifier, roles, type ) );
+		currentScope().addSymbol( new VariableDNode( identifier, type ) );
 	}
 
 	public void enterScope(){

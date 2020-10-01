@@ -304,9 +304,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( FormalMethodParameter n ) {
-		context.addSymbol( n.name().identifier(),
-				mapWorldToString( n.type().worldArguments() ),
-				(TypeDNode) n.type().accept( this ).get( 0 ));
+		context.addSymbol( n.name().identifier(), (TypeDNode) n.type().accept( this ).get( 0 ) );
 		return Collections.emptyList();
 	}
 
@@ -342,9 +340,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( VariableDeclaration n ) {
-		context.addSymbol( n.name().identifier(),
-				mapWorldToString( n.type().worldArguments() ),
-				(TypeDNode) n.type().accept( this ).get( 0 ));
+		context.addSymbol( n.name().identifier(), (TypeDNode) n.type().accept( this ).get( 0 ) );
 		return Collections.emptyList();
 	}
 
@@ -465,9 +461,9 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames.removeFirst();
 		}
 
-		public void addSymbol( String identifier, List< String > roles, TypeDNode type ){
+		public void addSymbol( String identifier, TypeDNode type ){
 			assert contextFrames.size() == 1;
-			symbolTable.addSymbol( identifier, roles, type );
+			symbolTable.addSymbol( identifier, type );
 		}
 
 		public void enterScope(){
@@ -501,7 +497,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			VariableDNode field = getTem().getField( identifier );
 			if( field != null ){
 				TypeDNode type = mapType( field.getType() );
-				return new VariableDNode( field.getName(), type.getRoles(), type );
+				return new VariableDNode( field.getName(), type );
 			}
 
 			throw new IllegalStateException();
