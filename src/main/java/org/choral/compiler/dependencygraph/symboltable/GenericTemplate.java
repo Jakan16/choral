@@ -35,11 +35,6 @@ public class GenericTemplate extends Template {
 	}
 
 	@Override
-	public void populateKnownSymbols() {
-		super.populateKnownSymbols();
-	}
-
-	@Override
 	public Template resolveIdentifier( String identifier ) {
 		return parentTemplate.resolveIdentifier( identifier );
 	}

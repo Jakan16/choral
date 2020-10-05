@@ -47,7 +47,7 @@ public class UnknownTemplate extends Template {
 	}
 
 	@Override
-	public List< MethodSignature > getMethodSigs() {
+	public List< MethodSig > getMethodSigs() {
 		return Collections.emptyList();
 	}
 

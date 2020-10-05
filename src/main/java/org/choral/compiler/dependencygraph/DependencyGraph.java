@@ -73,7 +73,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( Class n ) {
-		return new ArrayList<>( visitAndCollect( n.methods() ) );
+		List< DNode > nodes = new ArrayList<>();
+		for( ClassMethodDefinition definition: n.methods() ){
+			context.getContextFrame().setFuncGenericMap( context.getTem().getMethodSig( definition.signature().name().identifier(), definition.signature().parameters().size() ).getTypeParameters() );
+			nodes.addAll( definition.accept( this ) );
+		}
+		context.getContextFrame().setFuncGenericMap( Collections.emptyList() );
+		return nodes;
 	}
 
 	@Override
@@ -203,8 +209,19 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( MethodCallExpression n ) {
-		Template.MethodSignature sig = context.getTem().getMethodSig( n.name().identifier(), n.arguments().size() );
+		Template.MethodSig sig = context.getTem().getMethodSig( n.name().identifier(), n.arguments().size() );
+
 		TypeDNode mappedReturnType = context.mapType( sig.getReturnType() );
+
+		// TODO move to @methodSig
+		for( int i = 0; i < sig.getTypeParameters().size(); i++ ) {
+			if( sig.getReturnType().getTem() == sig.getTypeParameters().get( i ) ){
+				TypeDNode genericReturnType = n.typeArguments().get( i ).accept( this ).get( 0 ).getType();
+				mappedReturnType = new TypeDNode( genericReturnType.getTem(), mappedReturnType.getRoles(), genericReturnType.getTypeArguments() );
+				break;
+			}
+		}
+
 		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
 				mappedReturnType,
 				Mapper.map( sig.getParameters(), context::mapType ) );
@@ -391,14 +408,16 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	private static class ContextFrame {
 		private final Template tem;
 		private final Map< String, String > roleMap;
+		// TODO consider using Template instead of TypeDNode
 		private final Map< String, TypeDNode > genericMap;
+		private Map< String, TypeDNode > funcGenericMap = Collections.emptyMap();
 
 		public ContextFrame( Template tem ) {
 			assert tem != null;
 			this.tem = tem;
 
 			roleMap = Mapper.idMap( tem.worldParameters(), w -> w.toWorldArgument().name().identifier() );
-			genericMap = new HashMap<>();
+			genericMap = Collections.emptyMap();
 		}
 
 		public ContextFrame( Template tem, List< String > roles, List< TypeDNode > typeArgs ) {
@@ -406,7 +425,12 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.tem = tem;
 
 			roleMap = Mapper.mapping( tem.worldParameters(), roles, w -> w.toWorldArgument().name().identifier(), Mapper.id() );
-			genericMap = Mapper.mapping( tem.typeParameters(), typeArgs, t -> t.name().identifier(), Mapper.id() );
+			if( typeArgs.isEmpty() ){
+				genericMap = Collections.emptyMap();
+			}else {
+				genericMap = Mapper.mapping( tem.typeParameters(), typeArgs,
+						t -> t.name().identifier(), Mapper.id() );
+			}
 		}
 
 		public Template resolveIdentifier( String identifier ) {
@@ -414,7 +438,16 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		}
 
 		public TypeDNode replaceGeneric( String identifier ){
-			return genericMap.get( identifier );
+			TypeDNode tNode = this.funcGenericMap.get( identifier );
+			if( tNode != null ){
+				return tNode;
+			}
+			return this.genericMap.get( identifier );
+		}
+
+		public void setFuncGenericMap( List< Template > generics ){
+			funcGenericMap = Mapper.mapping( generics, Template::getName,
+					g -> new TypeDNode( g, Collections.emptyList(), Collections.emptyList() ) );
 		}
 	}
 
@@ -434,11 +467,14 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 		private TypeDNode mapType( TypeDNode type ){
 			if( type.getTem().isGeneric() ){
-				TypeDNode replaceType = getContextFrame().genericMap.get( type.getName() );
-				return new TypeDNode( replaceType.getTem(), Mapper.map( type.getRoles(), getContextFrame().roleMap::get ), replaceType.getTypeArguments() );
-			}else{
-				return type.copyWithMapping( getContextFrame().roleMap );
+				TypeDNode replaceType = getContextFrame().replaceGeneric( type.getName() );
+				if( replaceType != null ) {
+					return new TypeDNode( replaceType.getTem(),
+							Mapper.map( type.getRoles(), getContextFrame().roleMap::get ),
+							replaceType.getTypeArguments() );
+				}
 			}
+			return type.copyWithMapping( getContextFrame().roleMap );
 		}
 
 		private Template getTemplate( String packagePath, Class c ){
@@ -508,8 +544,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 				pushCurrentFrame();
 			}else {
 				TypeDNode t = node.getType();
-				Template tem = t.getTem();
-				pushFrame( tem, t.getRoles(), t.getTypeArguments() );
+				pushFrame( t.getTem(), t.getRoles(), t.getTypeArguments() );
 			}
 		}
 	}

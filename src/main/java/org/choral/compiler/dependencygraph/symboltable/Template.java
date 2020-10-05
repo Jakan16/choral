@@ -4,6 +4,7 @@ import org.choral.ast.ImportDeclaration;
 import org.choral.ast.body.Field;
 import org.choral.ast.body.FormalMethodParameter;
 import org.choral.ast.body.MethodDefinition;
+import org.choral.ast.body.MethodSignature;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
 import org.choral.ast.type.TypeExpression;
@@ -11,10 +12,7 @@ import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
 import org.choral.compiler.dependencygraph.dnodes.VariableDNode;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Template {
@@ -24,7 +22,7 @@ public abstract class Template {
 	private final Map<String, GenericTemplate > genericTemplates;
 	private final List< Map< String, String > > roleMaps = new ArrayList<>();
 	private final List< Map< String, TypeDNode > > genericMaps = new ArrayList<>();
-	private List< MethodSignature > methodDefinitions;
+	private List< MethodSig > methodDefinitions;
 	private List< VariableDNode > fields;
 	private List< TypeDNode > superTypes;
 
@@ -73,25 +71,19 @@ public abstract class Template {
 		return fields;
 	}
 
-	private List< MethodSignature > deriveMethodDefinitions(){
+	private List< MethodSig > deriveMethodDefinitions(){
 		prepare();
 
-		List< MethodSignature > definitions = methodDefinitions().stream()
-				.map( MethodDefinition::signature )
-				.map( s -> new MethodSignature(
-						s.name().identifier(),
-						s.parameters().stream().map( FormalMethodParameter::type )
-								.map( this::typeExpressionToNode ).collect(	Collectors.toList() ),
-						typeExpressionToNode( s.returnType() ) ) )
+		List< MethodSig > definitions = methodDefinitions().stream()
+				.map( MethodDefinition::signature ).map( s -> new MethodSig( s, this ) )
 				.collect( Collectors.toList() );
 
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
 			int index = i;
-			this.superTypes.get( i ).getTem().getMethodSigs().stream().map( s ->
-					new MethodSignature( s.getName(),
-							Mapper.map( s.getParameters(), p -> this.mapType(p, index ) ),
-							mapType( s.getReturnType(), index ) )
-			).forEach( definitions::add );
+			this.superTypes.get( i ).getTem().getMethodSigs().stream().map( s -> new MethodSig( s.getName(),
+					Mapper.map( s.getParameters(), p -> this.mapType(p, index ) ),
+					s.getTypeParameters(),
+					mapType( s.getReturnType(), index ) ) ).forEach( definitions::add );
 		}
 
 		return definitions;
@@ -100,10 +92,13 @@ public abstract class Template {
 	private TypeDNode mapType( TypeDNode type, int index ){
 		if( type.getTem().isGeneric() ){
 			TypeDNode replaceType = this.genericMaps.get( index ).get( type.getName() );
-			return new TypeDNode( replaceType.getTem(), Mapper.map( type.getRoles(), this.roleMaps.get( index )::get ), replaceType.getTypeArguments() );
-		}else{
-			return type.copyWithMapping( this.roleMaps.get( index ) );
+			if( replaceType != null ) {
+				return new TypeDNode( replaceType.getTem(),
+						Mapper.map( type.getRoles(), this.roleMaps.get( index )::get ),
+						replaceType.getTypeArguments() );
+			}
 		}
+		return type.copyWithMapping( this.roleMaps.get( index ) );
 	}
 
 	public void populateKnownSymbols(){
@@ -186,7 +181,7 @@ public abstract class Template {
 		throw new IllegalStateException();
 	}
 
-	public List< MethodSignature > getMethodSigs(){
+	public List< MethodSig > getMethodSigs(){
 		prepare();
 		if( this.methodDefinitions == null ){
 			this.methodDefinitions = deriveMethodDefinitions();
@@ -194,8 +189,8 @@ public abstract class Template {
 		return this.methodDefinitions;
 	}
 
-	public Template.MethodSignature getMethodSig( String name, int numArgs ){
-		for( Template.MethodSignature signature: getMethodSigs() ){
+	public MethodSig getMethodSig( String name, int numArgs ){
+		for( MethodSig signature: getMethodSigs() ){
 			if( signature.getName().equals( name ) &&
 					signature.getParameters().size() == numArgs ) {
 				return signature;
@@ -228,20 +223,49 @@ public abstract class Template {
 		return holdingPackage;
 	}
 
-	public static class MethodSignature{
+	public static class MethodSig {
 		private final String name;
-		//TODO support typeParameters
-		//private final List< TypeExpression > typeParameters;
+		private final List< Template > typeParameters;
 		private final List< TypeDNode > parameters;
 		private final TypeDNode returnType;
 
-		public MethodSignature(
+		public MethodSig(
 				String name, List< TypeDNode > parameters,
+				List< Template > typeParameters,
 				TypeDNode returnType
 		) {
 			this.name = name;
 			this.parameters = parameters;
 			this.returnType = returnType;
+			this.typeParameters = typeParameters;
+		}
+
+		public MethodSig( MethodSignature signature, Template parentTemplate ) {
+			this.typeParameters  = Mapper.map( signature.typeParameters(), t -> new GenericTemplate( parentTemplate, t ) );
+			Map< String, Template > funcGenericsMap = Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
+
+			this.name = signature.name().identifier();
+			this.parameters = signature.parameters().stream().map( FormalMethodParameter::type )
+					.map( t -> {
+						Template genericParameter = funcGenericsMap.get( signature.returnType().name().identifier() );
+						if( genericParameter != null ){
+							return new TypeDNode( genericParameter,
+									Mapper.map( t.worldArguments(), w -> w.name().identifier() ),
+									Collections.emptyList() );
+						}else{
+							return parentTemplate.typeExpressionToNode( t );
+						}
+					} ).collect( Collectors.toList() );
+
+			Template genericTemplate = funcGenericsMap.get( signature.returnType().name().identifier() );
+			if( genericTemplate != null ){
+				this.returnType = new TypeDNode( genericTemplate,
+						Mapper.map( signature.returnType().worldArguments(), w -> w.name().identifier() ),
+						Collections.emptyList() );
+			}else{
+				this.returnType = parentTemplate.typeExpressionToNode( signature.returnType() );
+			}
+
 		}
 
 		public String getName() {
@@ -254,6 +278,10 @@ public abstract class Template {
 
 		public TypeDNode getReturnType() {
 			return returnType;
+		}
+
+		public List< Template > getTypeParameters() {
+			return typeParameters;
 		}
 	}
 }
