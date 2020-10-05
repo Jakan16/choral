@@ -225,13 +225,13 @@ public abstract class Template {
 
 	public static class MethodSig {
 		private final String name;
-		private final List< Template > typeParameters;
+		private final List< GenericTemplate > typeParameters;
 		private final List< TypeDNode > parameters;
 		private final TypeDNode returnType;
 
 		public MethodSig(
 				String name, List< TypeDNode > parameters,
-				List< Template > typeParameters,
+				List< GenericTemplate > typeParameters,
 				TypeDNode returnType
 		) {
 			this.name = name;
@@ -241,13 +241,14 @@ public abstract class Template {
 		}
 
 		public MethodSig( MethodSignature signature, Template parentTemplate ) {
-			this.typeParameters  = Mapper.map( signature.typeParameters(), t -> new GenericTemplate( parentTemplate, t ) );
-			Map< String, Template > funcGenericsMap = Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
+			this.typeParameters = Mapper.map( signature.typeParameters(), t -> new GenericTemplate( parentTemplate, t ) );
+			Map< String, GenericTemplate > funcGenericsMap = Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
+			this.typeParameters.forEach( t -> t.setFuncGenericsMap( funcGenericsMap ) );
 
 			this.name = signature.name().identifier();
 			this.parameters = signature.parameters().stream().map( FormalMethodParameter::type )
 					.map( t -> {
-						Template genericParameter = funcGenericsMap.get( signature.returnType().name().identifier() );
+						Template genericParameter = funcGenericsMap.get( t.name().identifier() );
 						if( genericParameter != null ){
 							return new TypeDNode( genericParameter,
 									Mapper.map( t.worldArguments(), w -> w.name().identifier() ),
@@ -280,7 +281,7 @@ public abstract class Template {
 			return returnType;
 		}
 
-		public List< Template > getTypeParameters() {
+		public List< GenericTemplate > getTypeParameters() {
 			return typeParameters;
 		}
 	}

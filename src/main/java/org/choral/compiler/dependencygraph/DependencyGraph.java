@@ -445,7 +445,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return this.genericMap.get( identifier );
 		}
 
-		public void setFuncGenericMap( List< Template > generics ){
+		public void setFuncGenericMap( List< ? extends Template > generics ){
 			funcGenericMap = Mapper.mapping( generics, Template::getName,
 					g -> new TypeDNode( g, Collections.emptyList(), Collections.emptyList() ) );
 		}

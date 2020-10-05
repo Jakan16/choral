@@ -8,16 +8,22 @@ import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class GenericTemplate extends Template {
 
 	private final FormalTypeParameter parameter;
 	private final Template parentTemplate;
+	private Map< String, GenericTemplate > funcGenericsMap = Collections.emptyMap();
 
 	GenericTemplate( Template parentTemplate, FormalTypeParameter parameter ) {
 		super( Collections.emptyList(), parentTemplate.getHoldingPackage(), Collections.emptyList() );
 		this.parentTemplate = parentTemplate;
 		this.parameter = parameter;
+	}
+
+	public void setFuncGenericsMap(	Map< String, GenericTemplate > funcGenericsMap	) {
+		this.funcGenericsMap = funcGenericsMap;
 	}
 
 	@Override
@@ -36,6 +42,12 @@ public class GenericTemplate extends Template {
 
 	@Override
 	public Template resolveIdentifier( String identifier ) {
+
+		Template tem = funcGenericsMap.get( identifier );
+		if( tem != null ){
+			return tem;
+		}
+
 		return parentTemplate.resolveIdentifier( identifier );
 	}
 
