@@ -227,8 +227,15 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			}
 		}
 
-		MethodCallDNode node = new MethodCallDNode( visitAndCollect( n.arguments() ),
-				mrt,
+		List< DNode > arguments = new ArrayList<>();
+
+		for( Expression exp: n.arguments() ){
+			this.context.pushRootFrame();
+			arguments.addAll( exp.accept( this ) );
+			this.context.popFrame();
+		}
+
+		MethodCallDNode node = new MethodCallDNode( arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
 		node.setRole( mrt.getRoles() );
 		return Collections.singletonList( node );
@@ -236,7 +243,14 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( ClassInstantiationExpression n ) {
-		List< DNode > dependencies = visitAndCollect( n.arguments() );
+		List< DNode > dependencies = new ArrayList<>();
+
+		for( Expression exp: n.arguments() ){
+			this.context.pushRootFrame();
+			dependencies.addAll( exp.accept( this ) );
+			this.context.popFrame();
+		}
+
 		TypeDNode type = (TypeDNode) n.typeExpression().accept( this ).get( 0 );
 		return Collections.singletonList(
 				new ClassInstantiationDNode( dependencies, type.getName(), type ) );
@@ -507,6 +521,10 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames.addFirst( this.contextFrames.getFirst() );
 		}
 
+		public void pushRootFrame(){
+			this.contextFrames.addFirst( rootFrame() );
+		}
+
 		public void popFrame() {
 			this.contextFrames.removeFirst();
 		}
@@ -530,17 +548,21 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return this.contextFrames.getFirst();
 		}
 
+		public ContextFrame rootFrame(){
+			return this.contextFrames.getLast();
+		}
+
 		public Template currentTem() {
 			return currentFrame().tem;
 		}
 
 		public DNode resolveIdentifier(String identifier){
-			//if( this.contextFrames.size() == 1 ){
+			if( rootFrame() == currentFrame() ){
 				VariableDNode node = symbolTable.getSymbol( identifier );
 				if( node != null ){
 					return node;
 				}
-			//}
+			}
 
 			VariableDNode field = currentTem().getField( identifier );
 			if( field != null ){
