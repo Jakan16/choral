@@ -14,7 +14,7 @@ public class GenericTemplate extends Template {
 
 	private final FormalTypeParameter parameter;
 	private final Template parentTemplate;
-	private Map< String, GenericTemplate > funcGenericsMap = Collections.emptyMap();
+	private Map< String, Template > funcGenericsMap = Collections.emptyMap();
 
 	GenericTemplate( Template parentTemplate, FormalTypeParameter parameter ) {
 		super( Collections.emptyList(), parentTemplate.getHoldingPackage(), Collections.emptyList() );
@@ -22,7 +22,7 @@ public class GenericTemplate extends Template {
 		this.parameter = parameter;
 	}
 
-	public void setFuncGenericsMap(	Map< String, GenericTemplate > funcGenericsMap	) {
+	public void setFuncGenericsMap(	Map< String, Template > funcGenericsMap	) {
 		this.funcGenericsMap = funcGenericsMap;
 	}
 

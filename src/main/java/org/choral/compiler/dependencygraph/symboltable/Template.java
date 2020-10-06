@@ -5,6 +5,7 @@ import org.choral.ast.body.Field;
 import org.choral.ast.body.FormalMethodParameter;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.body.MethodSignature;
+import org.choral.ast.expression.MethodCallExpression;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
 import org.choral.ast.type.TypeExpression;
@@ -26,7 +27,11 @@ public abstract class Template {
 	private List< VariableDNode > fields;
 	private List< TypeDNode > superTypes;
 
-	Template( List< ImportDeclaration > importDeclarations, Package holdingPackage, List< FormalTypeParameter > generics ) {
+	Template(
+			List< ImportDeclaration > importDeclarations,
+			Package holdingPackage,
+			List< FormalTypeParameter > generics
+	) {
 		this.importDeclarations = importDeclarations;
 		this.holdingPackage = holdingPackage;
 
@@ -51,15 +56,19 @@ public abstract class Template {
 	private void createMappings(){
 		for( TypeDNode sType: this.superTypes ){
 			Template sTem = sType.getTem();
-			this.roleMaps.add( Mapper.mapping( sTem.worldParameters(), sType.getRoles(), w -> w.name().identifier(), Mapper.id() ) );
-			this.genericMaps.add( Mapper.mapping( sTem.typeParameters(), sType.getTypeArguments(), g -> g.name().identifier(), Mapper.id() ) );
+			this.roleMaps.add( Mapper.mapping( sTem.worldParameters(), sType.getRoles(),
+					w -> w.name().identifier(), Mapper.id() ) );
+			this.genericMaps.add( Mapper.mapping( sTem.typeParameters(), sType.getTypeArguments(),
+					g -> g.name().identifier(), Mapper.id() ) );
 		}
 	}
 
 	private List< VariableDNode > deriveFields(){
 		prepare();
 
-		List< VariableDNode > fields = Mapper.map( fields(), f -> new VariableDNode( f.name().identifier(), typeExpressionToNode( f.typeExpression() ) ) );
+		List< VariableDNode > fields = Mapper.map( fields(), f ->
+				new VariableDNode( f.name().identifier(),
+						typeExpressionToNode( f.typeExpression() ) ) );
 
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
 			int index = i;
@@ -80,7 +89,8 @@ public abstract class Template {
 
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
 			int index = i;
-			this.superTypes.get( i ).getTem().getMethodSigs().stream().map( s -> new MethodSig( s.getName(),
+			this.superTypes.get( i ).getTem().getMethodSigs().stream().map( s -> new MethodSig(
+					s.getName(),
 					Mapper.map( s.getParameters(), p -> this.mapType(p, index ) ),
 					s.getTypeParameters(),
 					mapType( s.getReturnType(), index ) ) ).forEach( definitions::add );
@@ -178,7 +188,7 @@ public abstract class Template {
 				return field;
 			}
 		}
-		throw new IllegalStateException();
+		throw new IllegalStateException( "Could not find " + identifier + " field in " + getName() );
 	}
 
 	public List< MethodSig > getMethodSigs(){
@@ -189,6 +199,14 @@ public abstract class Template {
 		return this.methodDefinitions;
 	}
 
+	public MethodSig getMethodSig( MethodCallExpression callExpression ){
+		return getMethodSig(callExpression.name().identifier(), callExpression.arguments().size());
+	}
+
+	public MethodSig getMethodSig( MethodDefinition md ){
+		return getMethodSig(md.signature().name().identifier(), md.signature().parameters().size());
+	}
+
 	public MethodSig getMethodSig( String name, int numArgs ){
 		for( MethodSig signature: getMethodSigs() ){
 			if( signature.getName().equals( name ) &&
@@ -196,7 +214,8 @@ public abstract class Template {
 				return signature;
 			}
 		}
-		throw new IllegalStateException( "Unknown function: " + name + " with " + numArgs + " argument(s)" );
+		throw new IllegalStateException( "Unknown function: " + name +
+				" with " + numArgs + " argument(s)" );
 	}
 
 	public abstract String getName();
@@ -240,33 +259,22 @@ public abstract class Template {
 			this.typeParameters = typeParameters;
 		}
 
-		public MethodSig( MethodSignature signature, Template parentTemplate ) {
-			this.typeParameters = Mapper.map( signature.typeParameters(), t -> new GenericTemplate( parentTemplate, t ) );
-			Map< String, GenericTemplate > funcGenericsMap = Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
+		public MethodSig( MethodSignature sig, Template parentTemplate ) {
+			this.typeParameters = Mapper.map( sig.typeParameters(),
+					t -> new GenericTemplate( parentTemplate, t ) );
+			Map< String, Template > funcGenericsMap =
+					Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
 			this.typeParameters.forEach( t -> t.setFuncGenericsMap( funcGenericsMap ) );
+			this.name = sig.name().identifier();
+			this.parameters = sig.parameters().stream().map( FormalMethodParameter::type )
+					.map( t ->
+							funcGenericsMap.getOrDefault( t.name().identifier(), parentTemplate )
+							.typeExpressionToNode( t )
+					).collect( Collectors.toList() );
 
-			this.name = signature.name().identifier();
-			this.parameters = signature.parameters().stream().map( FormalMethodParameter::type )
-					.map( t -> {
-						Template genericParameter = funcGenericsMap.get( t.name().identifier() );
-						if( genericParameter != null ){
-							return new TypeDNode( genericParameter,
-									Mapper.map( t.worldArguments(), w -> w.name().identifier() ),
-									Collections.emptyList() );
-						}else{
-							return parentTemplate.typeExpressionToNode( t );
-						}
-					} ).collect( Collectors.toList() );
-
-			Template genericTemplate = funcGenericsMap.get( signature.returnType().name().identifier() );
-			if( genericTemplate != null ){
-				this.returnType = new TypeDNode( genericTemplate,
-						Mapper.map( signature.returnType().worldArguments(), w -> w.name().identifier() ),
-						Collections.emptyList() );
-			}else{
-				this.returnType = parentTemplate.typeExpressionToNode( signature.returnType() );
-			}
-
+			this.returnType = funcGenericsMap.getOrDefault(
+					sig.returnType().name().identifier(), parentTemplate
+			).typeExpressionToNode( sig.returnType() );
 		}
 
 		public String getName() {

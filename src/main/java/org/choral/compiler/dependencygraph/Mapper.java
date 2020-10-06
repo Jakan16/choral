@@ -55,7 +55,7 @@ public class Mapper {
 	}
 
 	@SuppressWarnings( "unchecked" )
-	public static < T > Function< T, T > id(){
-		return (Function< T, T >) identityFunction;
+	public static < T extends R, R > Function< T, R > id(){
+		return (Function< T, R >) identityFunction;
 	}
 }
