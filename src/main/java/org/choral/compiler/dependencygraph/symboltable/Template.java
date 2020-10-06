@@ -1,10 +1,7 @@
 package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.ast.ImportDeclaration;
-import org.choral.ast.body.Field;
-import org.choral.ast.body.FormalMethodParameter;
-import org.choral.ast.body.MethodDefinition;
-import org.choral.ast.body.MethodSignature;
+import org.choral.ast.body.*;
 import org.choral.ast.expression.MethodCallExpression;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
@@ -23,7 +20,8 @@ public abstract class Template {
 	private final Map<String, GenericTemplate > genericTemplates;
 	private final List< Map< String, String > > roleMaps = new ArrayList<>();
 	private final List< Map< String, TypeDNode > > genericMaps = new ArrayList<>();
-	private List< MethodSig > methodDefinitions;
+	private List< MethodSig > methodSigs;
+	private List< MethodSig > constructorSigs;
 	private List< VariableDNode > fields;
 	private List< TypeDNode > superTypes;
 
@@ -64,8 +62,6 @@ public abstract class Template {
 	}
 
 	private List< VariableDNode > deriveFields(){
-		prepare();
-
 		List< VariableDNode > fields = Mapper.map( fields(), f ->
 				new VariableDNode( f.name().identifier(),
 						typeExpressionToNode( f.typeExpression() ) ) );
@@ -80,9 +76,7 @@ public abstract class Template {
 		return fields;
 	}
 
-	private List< MethodSig > deriveMethodDefinitions(){
-		prepare();
-
+	private List< MethodSig > deriveMethodSigs(){
 		List< MethodSig > definitions = methodDefinitions().stream()
 				.map( MethodDefinition::signature ).map( s -> new MethodSig( s, this ) )
 				.collect( Collectors.toList() );
@@ -97,6 +91,14 @@ public abstract class Template {
 		}
 
 		return definitions;
+	}
+
+	private List< MethodSig > deriveConstructorSigs(){
+		List< MethodSig > constructorSigs = constructorDefinitions().stream()
+				.map( ConstructorDefinition::signature ).map( s -> new MethodSig( s, this ) )
+				.collect( Collectors.toList() );
+		constructorSigs.add( new MethodSig( getName(), Collections.emptyList(), Collections.emptyList(), null ) );
+		return constructorSigs;
 	}
 
 	private TypeDNode mapType( TypeDNode type, int index ){
@@ -193,10 +195,10 @@ public abstract class Template {
 
 	public List< MethodSig > getMethodSigs(){
 		prepare();
-		if( this.methodDefinitions == null ){
-			this.methodDefinitions = deriveMethodDefinitions();
+		if( this.methodSigs == null ){
+			this.methodSigs = deriveMethodSigs();
 		}
-		return this.methodDefinitions;
+		return this.methodSigs;
 	}
 
 	public MethodSig getMethodSig( MethodCallExpression callExpression ){
@@ -218,6 +220,23 @@ public abstract class Template {
 				" with " + numArgs + " argument(s)" );
 	}
 
+	public List< MethodSig > getConstructorSigs() {
+		if( this.constructorSigs == null ){
+			this.constructorSigs = deriveConstructorSigs();
+		}
+		return constructorSigs;
+	}
+
+	public MethodSig getConstructorSig( int numArgs ){
+		for( MethodSig signature: getConstructorSigs() ){
+			if( signature.getParameters().size() == numArgs ){
+				return signature;
+			}
+		}
+
+		throw new IllegalStateException();
+	}
+
 	public abstract String getName();
 
 	public abstract List< TypeDNode > prepareSuperType();
@@ -227,6 +246,10 @@ public abstract class Template {
 	public abstract List< FormalTypeParameter > typeParameters();
 
 	public abstract List< ? extends MethodDefinition > methodDefinitions();
+
+	public List< ConstructorDefinition > constructorDefinitions(){
+		return Collections.emptyList();
+	}
 
 	public abstract List< Field > fields();
 
@@ -275,6 +298,22 @@ public abstract class Template {
 			this.returnType = funcGenericsMap.getOrDefault(
 					sig.returnType().name().identifier(), parentTemplate
 			).typeExpressionToNode( sig.returnType() );
+		}
+
+		public MethodSig( ConstructorSignature sig, Template parentTemplate ) {
+			this.typeParameters = Mapper.map( sig.typeParameters(),
+					t -> new GenericTemplate( parentTemplate, t ) );
+			Map< String, Template > funcGenericsMap =
+					Mapper.mapping( this.typeParameters, Template::getName, Mapper.id() );
+			this.typeParameters.forEach( t -> t.setFuncGenericsMap( funcGenericsMap ) );
+			this.name = sig.name().identifier();
+			this.parameters = sig.parameters().stream().map( FormalMethodParameter::type )
+					.map( t ->
+							funcGenericsMap.getOrDefault( t.name().identifier(), parentTemplate )
+									.typeExpressionToNode( t )
+					).collect( Collectors.toList() );
+
+			this.returnType = null;
 		}
 
 		public String getName() {

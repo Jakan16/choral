@@ -2,6 +2,7 @@ package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.ast.ImportDeclaration;
 import org.choral.ast.body.Class;
+import org.choral.ast.body.ConstructorDefinition;
 import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.type.FormalTypeParameter;
@@ -15,7 +16,7 @@ public class ClassTemplate extends Template {
 	private final Class classNode;
 
 	ClassTemplate( Class classNode, List< ImportDeclaration > importDeclarations, Package holdingPackage ) {
-		super(importDeclarations, holdingPackage, classNode.typeParameters() );
+		super( importDeclarations, holdingPackage, classNode.typeParameters() );
 		this.classNode = classNode;
 	}
 
@@ -24,7 +25,6 @@ public class ClassTemplate extends Template {
 		if( classNode.extendsClass() != null ){
 			return Collections.singletonList( typeExpressionToNode( classNode.extendsClass() ) );
 		}
-
 		return Collections.emptyList();
 	}
 
@@ -46,6 +46,11 @@ public class ClassTemplate extends Template {
 	@Override
 	public List< ? extends MethodDefinition > methodDefinitions() {
 		return classNode.methods();
+	}
+
+	@Override
+	public List< ConstructorDefinition > constructorDefinitions() {
+		return classNode.constructors();
 	}
 
 	@Override

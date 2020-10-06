@@ -252,8 +252,11 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		}
 
 		TypeDNode type = (TypeDNode) n.typeExpression().accept( this ).get( 0 );
+		Template.MethodSig sig = type.getTem().getConstructorSig( n.arguments().size() );
+		Map< String, String > roleMap = Mapper.mapping( type.getTem().worldParameters(), type.getRoles(), p -> p.toWorldArgument().name().identifier(), Mapper.id() );
+		List< TypeDNode > parameters = Mapper.map( sig.getParameters(), p -> new TypeDNode( p.getTem(), Mapper.map( p.getRoles(), roleMap::get ), p.getTypeArguments() ) );
 		return Collections.singletonList(
-				new ClassInstantiationDNode( dependencies, type.getName(), type ) );
+				new ClassInstantiationDNode( dependencies, type.getName(), type, parameters ) );
 	}
 
 	@Override
