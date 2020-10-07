@@ -123,9 +123,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > dependencies = new ArrayList<>( safeVisit( n.scope() ) );
 		assert dependencies.size() == 1;
 		context.pushContextOf( dependencies.get( 0 ) );
-		dependencies.addAll( safeVisit( n.scopedExpression() ) );
+		List< DNode > scopedExp = safeVisit( n.scopedExpression() );
+		dependencies.addAll( scopedExp );
 		context.popFrame();
-		return Collections.singletonList( new ExpressionDNode( dependencies, "ScopedExpression" ) );
+		if( dependencies.get( 0 ) instanceof DThis ){
+			return scopedExp;
+		}
+		return Collections.singletonList( new DExpression( dependencies, "ScopedExpression" ) );
 	}
 
 	@Override
@@ -180,8 +184,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > dependencies = new ArrayList<>();
 		dependencies.addAll( safeVisit( n.value() ) );
 		dependencies.addAll( safeVisit( n.target() ) );
-		ExpressionDNode expressionDNode = new ExpressionDNode( dependencies, "AssignExpression" );
-		return Collections.singletonList( expressionDNode );
+		DExpression dExpression = new DExpression( dependencies, "AssignExpression" );
+		return Collections.singletonList( dExpression );
 	}
 
 	@Override
@@ -189,8 +193,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > dependencies = new ArrayList<>();
 		dependencies.addAll( safeVisit( n.left() ) );
 		dependencies.addAll( safeVisit( n.right() ) );
-		ExpressionDNode expressionDNode = new ExpressionDNode( dependencies, "BinaryExpression" );
-		return Collections.singletonList( expressionDNode );
+		DExpression dExpression = new DExpression( dependencies, "BinaryExpression" );
+		return Collections.singletonList( dExpression );
 	}
 
 	@Override
@@ -200,7 +204,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( EnclosedExpression n ) {
-		return Collections.singletonList( new ExpressionDNode( safeVisit( n.nestedExpression() ),
+		return Collections.singletonList( new DExpression( safeVisit( n.nestedExpression() ),
 				"EnclosedExpression" ) );
 	}
 
@@ -211,18 +215,18 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( StaticAccessExpression n ) {
-		return n.typeExpression().accept( this );
+		return Collections.singletonList( new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) ) );
 	}
 
 	@Override
 	public List< DNode > visit( MethodCallExpression n ) {
 		Template.MethodSig sig = context.currentTem().getMethodSig( n );
-		TypeDNode mrt = context.mapType( sig.getReturnType() );
+		DType mrt = context.mapType( sig.getReturnType() );
 
 		for( int i = 0; i < sig.getTypeParameters().size(); i++ ) {
 			if( sig.getReturnType().getTem() == sig.getTypeParameters().get( i ) ){
-				TypeDNode rrt = n.typeArguments().get( i ).accept( this ).get( 0 ).getType();
-				mrt = new TypeDNode( rrt.getTem(), mrt.getRoles(), rrt.getTypeArguments() );
+				DType rrt = context.getTypeOfExpression( n.typeArguments().get( i ) );
+				mrt = new DType( rrt.getTem(), mrt.getRoles(), rrt.getTypeArguments() );
 				break;
 			}
 		}
@@ -235,7 +239,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.context.popFrame();
 		}
 
-		MethodCallDNode node = new MethodCallDNode( arguments, mrt,
+		DMethodCall node = new DMethodCall( arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
 		node.setRole( mrt.getRoles() );
 		return Collections.singletonList( node );
@@ -251,12 +255,17 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.context.popFrame();
 		}
 
-		TypeDNode type = (TypeDNode) n.typeExpression().accept( this ).get( 0 );
+		DType type = context.getTypeOfExpression( n.typeExpression() );
 		Template.MethodSig sig = type.getTem().getConstructorSig( n.arguments().size() );
-		Map< String, String > roleMap = Mapper.mapping( type.getTem().worldParameters(), type.getRoles(), p -> p.toWorldArgument().name().identifier(), Mapper.id() );
-		List< TypeDNode > parameters = Mapper.map( sig.getParameters(), p -> new TypeDNode( p.getTem(), Mapper.map( p.getRoles(), roleMap::get ), p.getTypeArguments() ) );
+		Map< String, String > roleMap = Mapper.mapping(
+				type.getTem().worldParameters(), type.getRoles(),
+				p -> p.toWorldArgument().name().identifier(), Mapper.id() );
+		List< DType > parameters = Mapper.map( sig.getParameters(),
+				p -> new DType( p.getTem(),
+						Mapper.map( p.getRoles(), roleMap::get ),
+						p.getTypeArguments() ) );
 		return Collections.singletonList(
-				new ClassInstantiationDNode( dependencies, type.getName(), type, parameters ) );
+				new DClassInstantiation( dependencies, type.getName(), type, parameters ) );
 	}
 
 	@Override
@@ -266,22 +275,22 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( NotExpression n ) {
-		return Collections.singletonList( new ExpressionDNode( n.expression().accept( this ), "NotExpression" ) );
+		return Collections.singletonList( new DExpression( n.expression().accept( this ), "NotExpression" ) );
 	}
 
 	@Override
 	public List< DNode > visit( ThisExpression n ) {
-		return Collections.singletonList( new ThisDNode() );
+		return Collections.singletonList( new DThis() );
 	}
 
 	@Override
 	public List< DNode > visit( SuperExpression n ) {
-		return Collections.singletonList( new ThisDNode() );
+		return Collections.singletonList( new DThis() );
 	}
 
 	@Override
 	public List< DNode > visit( NullExpression n ) {
-		LiteralDNode node = new LiteralDNode( "NullExpression" );
+		DLiteral node = new DLiteral( "NullExpression" );
 		node.setRole( mapWorldToString( n.worlds() ) );
 		return Collections.singletonList( node );
 	}
@@ -300,21 +309,21 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( LiteralExpression.BooleanLiteralExpression n ) {
-		LiteralDNode node = new LiteralDNode( "BooleanLiteralExpression" );
+		DLiteral node = new DLiteral( "BooleanLiteralExpression" );
 		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
 		return Collections.singletonList( node );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.DoubleLiteralExpression n ) {
-		LiteralDNode node = new LiteralDNode( "DoubleLiteralExpression" );
+		DLiteral node = new DLiteral( "DoubleLiteralExpression" );
 		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
 		return Collections.singletonList( node );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.IntegerLiteralExpression n ) {
-		LiteralDNode node = new LiteralDNode( "IntegerLiteralExpression" );
+		DLiteral node = new DLiteral( "IntegerLiteralExpression" );
 		node.setSource( n );
 		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
 		return Collections.singletonList( node );
@@ -322,7 +331,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( LiteralExpression.StringLiteralExpression n ) {
-		LiteralDNode node = new LiteralDNode( "StringLiteralExpression" );
+		DLiteral node = new DLiteral( "StringLiteralExpression" );
 		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
 		return Collections.singletonList( node );
 	}
@@ -344,7 +353,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( FormalMethodParameter n ) {
-		context.addSymbol( n.name().identifier(), (TypeDNode) n.type().accept( this ).get( 0 ) );
+		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
 		return Collections.emptyList();
 	}
 
@@ -385,28 +394,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( VariableDeclaration n ) {
-		context.addSymbol( n.name().identifier(), (TypeDNode) n.type().accept( this ).get( 0 ) );
+		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
 		return Collections.emptyList();
 	}
 
 	@Override
 	public List< DNode > visit( TypeExpression n ) {
-		List< TypeDNode > typeArgs = new ArrayList<>();
-		for( TypeExpression t: n.typeArguments() ){
-			typeArgs.add( (TypeDNode) t.accept( this ).get( 0 ) );
-		}
-
-		TypeDNode type = context.currentFrame().replaceGeneric( n.name().identifier() );
-		if( type != null ){
-			assert typeArgs.size() == 0;
-			return Collections.singletonList(
-					new TypeDNode( type.getTem(), mapWorldToString( n.worldArguments() ),
-							type.getTypeArguments() ) );
-		}
-
-		return Collections.singletonList(
-				new TypeDNode( context.currentFrame().resolveIdentifier( n.name().identifier() ),
-				mapWorldToString( n.worldArguments() ), typeArgs ) );
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -429,15 +423,15 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		throw new UnsupportedOperationException();
 	}
 
-	public List< String > mapWorldToString( List< WorldArgument > worldArguments ){
+	public static List< String > mapWorldToString( List< WorldArgument > worldArguments ){
 		return Mapper.map( worldArguments, w -> w.name().identifier() );
 	}
 
 	private static class ContextFrame {
 		private final Template tem;
 		private final Map< String, String > roleMap;
-		private final Map< String, TypeDNode > genericMap;
-		private Map< String, TypeDNode > funcGenericMap = Collections.emptyMap();
+		private final Map< String, DType > genericMap;
+		private Map< String, DType > funcGenericMap = Collections.emptyMap();
 
 		public ContextFrame( Template tem ) {
 			assert tem != null;
@@ -449,7 +443,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			genericMap = Collections.emptyMap();
 		}
 
-		public ContextFrame( TypeDNode t ) {
+		public ContextFrame( DType t ) {
 			Template tem = t.getTem();
 			assert tem != null;
 			this.tem = tem;
@@ -468,8 +462,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return tem.resolveIdentifier( identifier );
 		}
 
-		public TypeDNode replaceGeneric( String identifier ){
-			TypeDNode tNode = this.funcGenericMap.get( identifier );
+		public DType replaceGeneric( String identifier ){
+			DType tNode = this.funcGenericMap.get( identifier );
 			if( tNode != null ){
 				return tNode;
 			}
@@ -478,7 +472,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 		public void setFuncGenericMap( List< ? extends Template > generics ){
 			funcGenericMap = Mapper.mapping( generics, Template::getName,
-					g -> new TypeDNode( g, Collections.emptyList(), Collections.emptyList() ) );
+					g -> new DType( g, Collections.emptyList(), Collections.emptyList() ) );
 		}
 	}
 
@@ -496,11 +490,11 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames = new ArrayDeque<>();
 		}
 
-		private TypeDNode mapType( TypeDNode type ){
+		private DType mapType( DType type ){
 			if( type.getTem().isGeneric() ){
-				TypeDNode replaceType = currentFrame().replaceGeneric( type.getName() );
+				DType replaceType = currentFrame().replaceGeneric( type.getName() );
 				if( replaceType != null ) {
-					return new TypeDNode( replaceType.getTem(),
+					return new DType( replaceType.getTem(),
 							Mapper.map( type.getRoles(), currentFrame().roleMap::get ),
 							replaceType.getTypeArguments() );
 				}
@@ -516,7 +510,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames.addFirst( new ContextFrame( getTemplate( packagePath, c ) ) );
 		}
 
-		public void pushFrame( TypeDNode t ){
+		public void pushFrame( DType t ){
 			this.contextFrames.addFirst( new ContextFrame( t ) );
 		}
 
@@ -532,7 +526,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames.removeFirst();
 		}
 
-		public void addSymbol( String identifier, TypeDNode type ){
+		public void addSymbol( String identifier, DType type ){
 			assert contextFrames.size() == 1;
 			symbolTable.addSymbol( identifier, type );
 		}
@@ -561,27 +555,43 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 		public DNode resolveIdentifier(String identifier){
 			if( rootFrame() == currentFrame() ){
-				VariableDNode node = symbolTable.getSymbol( identifier );
+				DVariable node = symbolTable.getSymbol( identifier );
 				if( node != null ){
 					return node;
 				}
 			}
 
-			VariableDNode field = currentTem().getField( identifier );
+			DVariable field = currentTem().getField( identifier );
 			if( field != null ){
-				return new VariableDNode( field.getName(), mapType( field.getType() ) );
+				return new DVariable( field.getName(), mapType( field.getType() ) );
 			}
 
 			throw new IllegalStateException();
 		}
 
 		public void pushContextOf( DNode node ) {
-			if( node instanceof ThisDNode ){
-				pushCurrentFrame();
+			if( node instanceof DThis ){
+				pushRootFrame();
 			}else {
-				TypeDNode t = node.getType();
-				pushFrame( t );
+				pushFrame( node.getType() );
 			}
+		}
+
+		public DType getTypeOfExpression( TypeExpression n ){
+			List< DType > typeArgs = new ArrayList<>();
+			for( TypeExpression t: n.typeArguments() ){
+				typeArgs.add( getTypeOfExpression( t ) );
+			}
+
+			DType type = currentFrame().replaceGeneric( n.name().identifier() );
+			if( type != null ){
+				assert typeArgs.size() == 0;
+				return new DType( type.getTem(), mapWorldToString( n.worldArguments() ),
+								type.getTypeArguments() );
+			}
+
+			return new DType( currentFrame().resolveIdentifier( n.name().identifier() ),
+							mapWorldToString( n.worldArguments() ), typeArgs );
 		}
 	}
 

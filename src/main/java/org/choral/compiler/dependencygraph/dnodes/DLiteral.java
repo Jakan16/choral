@@ -3,12 +3,12 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.Collections;
 import java.util.List;
 
-public class LiteralDNode extends DNode{
+public class DLiteral extends DNode{
 
 	private final String literalType;
 	private List< String > roles;
 
-	public LiteralDNode( String type ) {
+	public DLiteral( String type ) {
 		super( Collections.emptyList(), type );
 		this.literalType = type;
 	}
@@ -26,7 +26,7 @@ public class LiteralDNode extends DNode{
 	}
 
 	@Override
-	public TypeDNode getType() {
+	public DType getType() {
 		throw new UnsupportedOperationException();
 	}
 

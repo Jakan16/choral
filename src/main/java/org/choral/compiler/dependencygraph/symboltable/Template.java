@@ -7,8 +7,8 @@ import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
 import org.choral.ast.type.TypeExpression;
 import org.choral.compiler.dependencygraph.Mapper;
-import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
-import org.choral.compiler.dependencygraph.dnodes.VariableDNode;
+import org.choral.compiler.dependencygraph.dnodes.DType;
+import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,11 +19,11 @@ public abstract class Template {
 	private Map<String, Template > knownSymbols;
 	private final Map<String, GenericTemplate > genericTemplates;
 	private final List< Map< String, String > > roleMaps = new ArrayList<>();
-	private final List< Map< String, TypeDNode > > genericMaps = new ArrayList<>();
+	private final List< Map< String, DType > > genericMaps = new ArrayList<>();
 	private List< MethodSig > methodSigs;
 	private List< MethodSig > constructorSigs;
-	private List< VariableDNode > fields;
-	private List< TypeDNode > superTypes;
+	private List< DVariable > fields;
+	private List< DType > superTypes;
 
 	Template(
 			List< ImportDeclaration > importDeclarations,
@@ -52,7 +52,7 @@ public abstract class Template {
 	}
 
 	private void createMappings(){
-		for( TypeDNode sType: this.superTypes ){
+		for( DType sType: this.superTypes ){
 			Template sTem = sType.getTem();
 			this.roleMaps.add( Mapper.mapping( sTem.worldParameters(), sType.getRoles(),
 					w -> w.name().identifier(), Mapper.id() ) );
@@ -61,15 +61,15 @@ public abstract class Template {
 		}
 	}
 
-	private List< VariableDNode > deriveFields(){
-		List< VariableDNode > fields = Mapper.map( fields(), f ->
-				new VariableDNode( f.name().identifier(),
+	private List< DVariable > deriveFields(){
+		List< DVariable > fields = Mapper.map( fields(), f ->
+				new DVariable( f.name().identifier(),
 						typeExpressionToNode( f.typeExpression() ) ) );
 
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
 			int index = i;
 			this.superTypes.get( i ).getTem().getFields().stream()
-					.map( v -> new VariableDNode( v.getName(), mapType( v.getType(), index ) ) )
+					.map( v -> new DVariable( v.getName(), mapType( v.getType(), index ) ) )
 					.forEach( fields::add );
 		}
 
@@ -101,11 +101,11 @@ public abstract class Template {
 		return constructorSigs;
 	}
 
-	private TypeDNode mapType( TypeDNode type, int index ){
+	private DType mapType( DType type, int index ){
 		if( type.getTem().isGeneric() ){
-			TypeDNode replaceType = this.genericMaps.get( index ).get( type.getName() );
+			DType replaceType = this.genericMaps.get( index ).get( type.getName() );
 			if( replaceType != null ) {
-				return new TypeDNode( replaceType.getTem(),
+				return new DType( replaceType.getTem(),
 						Mapper.map( type.getRoles(), this.roleMaps.get( index )::get ),
 						replaceType.getTypeArguments() );
 			}
@@ -161,31 +161,31 @@ public abstract class Template {
 		return Template.unknownTemplate();
 	}
 
-	protected TypeDNode typeExpressionToNode( TypeExpression typeExpression ){
-		List< TypeDNode > typeArgs = new ArrayList<>();
+	protected DType typeExpressionToNode( TypeExpression typeExpression ){
+		List< DType > typeArgs = new ArrayList<>();
 		for( TypeExpression t: typeExpression.typeArguments() ){
 			typeArgs.add( typeExpressionToNode(t) );
 		}
 
-		return new TypeDNode(
+		return new DType(
 				resolveIdentifier( typeExpression.name().identifier() ),
 				Mapper.map( typeExpression.worldArguments(), w -> w.name().identifier() ),
 				typeArgs );
 	}
 
-	protected List< TypeDNode > typeExpressionsToNodes( List< TypeExpression > typeExpressions ){
+	protected List< DType > typeExpressionsToNodes( List< TypeExpression > typeExpressions ){
 		return Mapper.map( typeExpressions, this::typeExpressionToNode );
 	}
 
-	public List< VariableDNode > getFields(){
+	public List< DVariable > getFields(){
 		if( this.fields == null ){
 			this.fields = deriveFields();
 		}
 		return this.fields;
 	}
 
-	public VariableDNode getField( String identifier ){
-		for( VariableDNode field : getFields() ) {
+	public DVariable getField( String identifier ){
+		for( DVariable field : getFields() ) {
 			if( field.getName().equals( identifier ) ) {
 				return field;
 			}
@@ -239,7 +239,7 @@ public abstract class Template {
 
 	public abstract String getName();
 
-	public abstract List< TypeDNode > prepareSuperType();
+	public abstract List< DType > prepareSuperType();
 
 	public abstract List< FormalWorldParameter > worldParameters();
 
@@ -257,7 +257,7 @@ public abstract class Template {
 		return false;
 	}
 
-	public List< TypeDNode > getSuperTypes() {
+	public List< DType > getSuperTypes() {
 		return superTypes;
 	}
 
@@ -268,13 +268,13 @@ public abstract class Template {
 	public static class MethodSig {
 		private final String name;
 		private final List< GenericTemplate > typeParameters;
-		private final List< TypeDNode > parameters;
-		private final TypeDNode returnType;
+		private final List< DType > parameters;
+		private final DType returnType;
 
 		public MethodSig(
-				String name, List< TypeDNode > parameters,
+				String name, List< DType > parameters,
 				List< GenericTemplate > typeParameters,
-				TypeDNode returnType
+				DType returnType
 		) {
 			this.name = name;
 			this.parameters = parameters;
@@ -320,11 +320,11 @@ public abstract class Template {
 			return name;
 		}
 
-		public List< TypeDNode > getParameters() {
+		public List< DType > getParameters() {
 			return parameters;
 		}
 
-		public TypeDNode getReturnType() {
+		public DType getReturnType() {
 			return returnType;
 		}
 

@@ -5,8 +5,8 @@ import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
-import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
-import org.choral.compiler.dependencygraph.dnodes.VariableDNode;
+import org.choral.compiler.dependencygraph.dnodes.DType;
+import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +20,7 @@ public class UnknownTemplate extends Template {
 	}
 
 	@Override
-	public List< TypeDNode > prepareSuperType() {
+	public List< DType > prepareSuperType() {
 		return Collections.emptyList();
 	}
 
@@ -37,12 +37,12 @@ public class UnknownTemplate extends Template {
 	}
 
 	@Override
-	public List< VariableDNode > getFields() {
+	public List< DVariable > getFields() {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public VariableDNode getField( String identifier ) {
+	public DVariable getField( String identifier ) {
 		throw new UnsupportedOperationException();
 	}
 

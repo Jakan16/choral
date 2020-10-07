@@ -3,11 +3,11 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.Collections;
 import java.util.List;
 
-public class VariableDNode extends DNode {
+public class DVariable extends DNode {
 
-	private final TypeDNode type;
+	private final DType type;
 
-	public VariableDNode( String name, TypeDNode type ) {
+	public DVariable( String name, DType type ) {
 		super( Collections.emptyList(), name );
 		this.type = type;
 	}
@@ -17,7 +17,7 @@ public class VariableDNode extends DNode {
 	}
 
 	@Override
-	public TypeDNode getType() {
+	public DType getType() {
 		return type;
 	}
 

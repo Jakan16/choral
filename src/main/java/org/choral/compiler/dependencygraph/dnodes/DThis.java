@@ -2,14 +2,14 @@ package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.Collections;
 
-public class ThisDNode extends DNode {
+public class DThis extends DNode {
 
-	public ThisDNode() {
+	public DThis() {
 		super( Collections.emptyList(), "this" );
 	}
 
 	@Override
-	public TypeDNode getType() {
+	public DType getType() {
 		throw new UnsupportedOperationException();
 	}
 

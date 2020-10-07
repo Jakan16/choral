@@ -3,16 +3,16 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ClassInstantiationDNode extends DNode {
+public class DClassInstantiation extends DNode {
 
-	private final TypeDNode type;
-	private final List< TypeDNode > parameters;
+	private final DType type;
+	private final List< DType > parameters;
 
-	public ClassInstantiationDNode(
+	public DClassInstantiation(
 			List< DNode > dependencies,
 			String name,
-			TypeDNode type,
-			List< TypeDNode > parameters
+			DType type,
+			List< DType > parameters
 	) {
 		super( dependencies, name );
 		this.type = type;
@@ -20,13 +20,13 @@ public class ClassInstantiationDNode extends DNode {
 	}
 
 	@Override
-	public TypeDNode getType() {
+	public DType getType() {
 		return type;
 	}
 
 	@Override
 	public String toString() {
-		return type.toString() + " (" + this.parameters.stream().map( TypeDNode::toString )
+		return type.toString() + " (" + this.parameters.stream().map( DType::toString )
 				.collect( Collectors.joining( ", " ) ) + ")";
 	}
 }

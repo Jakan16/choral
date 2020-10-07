@@ -7,7 +7,7 @@ import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.type.FormalTypeParameter;
 import org.choral.ast.type.FormalWorldParameter;
-import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
+import org.choral.compiler.dependencygraph.dnodes.DType;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,7 +21,7 @@ public class ClassTemplate extends Template {
 	}
 
 	@Override
-	public List< TypeDNode > prepareSuperType(){
+	public List< DType > prepareSuperType(){
 		if( classNode.extendsClass() != null ){
 			return Collections.singletonList( typeExpressionToNode( classNode.extendsClass() ) );
 		}

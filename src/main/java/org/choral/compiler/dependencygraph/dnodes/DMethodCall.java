@@ -3,13 +3,13 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class MethodCallDNode extends DNode {
+public class DMethodCall extends DNode {
 
 	private List<String> roles;
-	private final TypeDNode returnType;
-	private final List< TypeDNode > parameters;
+	private final DType returnType;
+	private final List< DType > parameters;
 
-	public MethodCallDNode( List< DNode > dependencies, TypeDNode returnType, List< TypeDNode > parameters ) {
+	public DMethodCall( List< DNode > dependencies, DType returnType, List< DType > parameters ) {
 		super( dependencies, "MethodCallDNode" );
 		this.returnType = returnType;
 		this.parameters = parameters;
@@ -32,14 +32,14 @@ public class MethodCallDNode extends DNode {
 			sb.append( "@(" ).append( String.join( ", ", getRoles() ) ).append( ") " );
 		}
 		sb.append( returnType.toString() ).append( " (" )
-		.append( parameters.stream().map( TypeDNode::toString ).collect( Collectors.joining( ", " ) ) )
+		.append( parameters.stream().map( DType::toString ).collect( Collectors.joining( ", " ) ) )
 		.append( ")" );
 
 		return sb.toString();
 	}
 
 	@Override
-	public TypeDNode getType() {
+	public DType getType() {
 		return returnType;
 	}
 }

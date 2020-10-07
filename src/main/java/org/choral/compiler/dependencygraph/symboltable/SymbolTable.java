@@ -1,7 +1,7 @@
 package org.choral.compiler.dependencygraph.symboltable;
 
-import org.choral.compiler.dependencygraph.dnodes.TypeDNode;
-import org.choral.compiler.dependencygraph.dnodes.VariableDNode;
+import org.choral.compiler.dependencygraph.dnodes.DType;
+import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,9 +16,9 @@ public class SymbolTable {
 		scopes = new ArrayList<>();
 	}
 
-	public VariableDNode getSymbol( String identifier ){
+	public DVariable getSymbol( String identifier ){
 		for( Scope scope: scopes ){
-			VariableDNode node = scope.getSymbol( identifier );
+			DVariable node = scope.getSymbol( identifier );
 			if( node != null ){
 				return node;
 			}
@@ -27,9 +27,9 @@ public class SymbolTable {
 		return null;
 	}
 
-	public void addSymbol( String identifier, TypeDNode type ){
+	public void addSymbol( String identifier, DType type ){
 		assert getSymbol( identifier ) == null;
-		currentScope().addSymbol( new VariableDNode( identifier, type ) );
+		currentScope().addSymbol( new DVariable( identifier, type ) );
 	}
 
 	public void enterScope(){
@@ -45,13 +45,13 @@ public class SymbolTable {
 	}
 
 	private static class Scope {
-		Map< String, VariableDNode > symbols = new HashMap<>();
+		Map< String, DVariable > symbols = new HashMap<>();
 
-		VariableDNode getSymbol( String identifier ) {
+		DVariable getSymbol( String identifier ) {
 			return symbols.get( identifier );
 		}
 
-		void addSymbol( VariableDNode node ) {
+		void addSymbol( DVariable node ) {
 			symbols.put( node.getName(), node );
 		}
 	}

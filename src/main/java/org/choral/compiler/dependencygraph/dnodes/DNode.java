@@ -32,7 +32,7 @@ public abstract class DNode {
 		this.source = source;
 	}
 
-	public abstract TypeDNode getType();
+	public abstract DType getType();
 
 	@Override
 	public String toString() {

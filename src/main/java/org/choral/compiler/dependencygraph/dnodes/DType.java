@@ -3,49 +3,41 @@ package org.choral.compiler.dependencygraph.dnodes;
 import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.symboltable.Template;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class TypeDNode extends DNode{
+public class DType {
 
 	private final Template tem;
 	private final List< String > roles;
-	private final List< TypeDNode > typeArguments;
+	private final List< DType > typeArguments;
 
-	public TypeDNode( Template tem, List< String > roles, List< TypeDNode > typeArguments ) {
-		super(null, tem.getName() );
+	public DType( Template tem, List< String > roles, List< DType > typeArguments ) {
 		this.tem = tem;
 		this.roles = roles;
 		this.typeArguments = typeArguments;
 	}
 
-	public TypeDNode copyWithMapping( Map< String, String > roleMap ){
+	public DType copyWithMapping( Map< String, String > roleMap ){
 		List< String > roles = Mapper.map( this.roles, roleMap::get );
 		assert !roles.contains( null );
-		return new TypeDNode( this.tem, roles, this.typeArguments );
+		return new DType( this.tem, roles, this.typeArguments );
 	}
 
 	public Template getTem() {
 		return tem;
 	}
 
+	public String getName(){
+		return tem.getName();
+	}
+
 	public List< String > getRoles() {
 		return roles;
 	}
 
-	public List< TypeDNode > getTypeArguments() {
+	public List< DType > getTypeArguments() {
 		return typeArguments;
-	}
-
-	@Override
-	public List< DNode > getDependencies() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	public TypeDNode getType() {
-		return this;
 	}
 
 	@Override
