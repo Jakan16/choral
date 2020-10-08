@@ -3,7 +3,7 @@ package org.choral.compiler.dependencygraph.symboltable;
 import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.ast.type.FormalTypeParameter;
-import org.choral.ast.type.FormalWorldParameter;
+import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 
 import java.util.Collections;
@@ -57,22 +57,13 @@ public class GenericTemplate extends Template {
 	}
 
 	@Override
-	public List< FormalWorldParameter > worldParameters() {
-		return parameter.worldParameters();
+	public List< String > worldParameters() {
+		return Mapper.map( parameter.worldParameters(),
+				w -> w.toWorldArgument().name().identifier() );
 	}
 
 	@Override
-	public List< FormalTypeParameter > typeParameters() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List< ? extends MethodDefinition > methodDefinitions() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List< Field > fields() {
+	public List< String > typeParameters() {
 		return Collections.emptyList();
 	}
 

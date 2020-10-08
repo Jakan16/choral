@@ -2,6 +2,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.Collections;
 
+/**
+ * A static access of a class
+ */
 public class DStaticAccess extends DNode {
 
 	private final DType type;

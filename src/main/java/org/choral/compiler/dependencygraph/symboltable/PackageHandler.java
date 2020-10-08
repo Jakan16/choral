@@ -5,6 +5,9 @@ import org.choral.ast.body.Class;
 
 import java.util.Collection;
 
+/**
+ * Holds all known packages and classes
+ */
 public class PackageHandler {
 
 	private final Package root;
@@ -37,6 +40,11 @@ public class PackageHandler {
 	private final Template floatPrimitive;
 	private final Template doublePrimitive;
 
+	/**
+	 * Holds all known packages and classes
+	 * @param cus The source units
+	 * @param headerUnits The header units
+	 */
 	public PackageHandler(
 			Collection< CompilationUnit > cus,
 			Collection< CompilationUnit > headerUnits
@@ -65,14 +73,29 @@ public class PackageHandler {
 		doublePrimitive = new PrimitiveTemplate( langPackage.getTemplate( DOUBLE ) );
 	}
 
+	/**
+	 * The root {@link Package}. This package holds all other packages
+	 * @return The {@link Package} holding all other Packages
+	 */
 	public Package getRoot() {
 		return root;
 	}
 
-	public Template getTemplate( String packagePath, String className ){
-		return this.root.getPackage( packagePath ).getTemplate( className );
+	/**
+	 * Getter for a template by the given name
+	 * @param packagePath The path where the Template is stored
+	 * @param templateName The name of the Template
+	 * @return A Template for the given identifier
+	 */
+	public Template getTemplate( String packagePath, String templateName ){
+		return this.root.getPackage( packagePath ).getTemplate( templateName );
 	}
 
+	/**
+	 * Getter for Template by its primitive name
+	 * @param identifier Name of the primitive
+	 * @return A Template for the boxed type
+	 */
 	public Template getPrimitive( String identifier ){
 		return switch( identifier ) {
 			case PRIM_BOOLEAN -> booleanPrimitive;

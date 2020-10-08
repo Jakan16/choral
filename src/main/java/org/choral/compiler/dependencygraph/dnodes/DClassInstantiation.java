@@ -3,6 +3,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Node for class instantiation
+ */
 public class DClassInstantiation extends DNode {
 
 	private final DType type;

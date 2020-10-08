@@ -2,18 +2,21 @@ package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
-import org.choral.ast.type.FormalTypeParameter;
-import org.choral.ast.type.FormalWorldParameter;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Represents a Java primitive type
+ */
 public class PrimitiveTemplate extends Template {
 
 	private final Template boxedType;
 
 	PrimitiveTemplate( Template boxedType ) {
+		// the Holding package does not need to be set,
+		// as all methods are delegated to the boxedType of the primitive
 		super( Collections.emptyList(), null, Collections.emptyList() );
 
 		this.boxedType = boxedType;
@@ -30,12 +33,12 @@ public class PrimitiveTemplate extends Template {
 	}
 
 	@Override
-	public List< FormalWorldParameter > worldParameters() {
+	public List< String > worldParameters() {
 		return boxedType.worldParameters();
 	}
 
 	@Override
-	public List< FormalTypeParameter > typeParameters() {
+	public List< String > typeParameters() {
 		return boxedType.typeParameters();
 	}
 

@@ -3,6 +3,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Node for literal values
+ */
 public class DLiteral extends DNode{
 
 	private final String literalType;

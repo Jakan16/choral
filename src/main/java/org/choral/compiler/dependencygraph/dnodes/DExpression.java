@@ -2,6 +2,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.List;
 
+/**
+ * Node for generic expression
+ */
 public class DExpression extends DNode{
 	private List<String> roles;
 

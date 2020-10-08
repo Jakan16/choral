@@ -6,6 +6,9 @@ import org.choral.compiler.dependencygraph.symboltable.Template;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Represents a type with roles and type arguments
+ */
 public class DType {
 
 	private final Template tem;
@@ -18,6 +21,11 @@ public class DType {
 		this.typeArguments = typeArguments;
 	}
 
+	/**
+	 * Returns a copy with the roles mapped using the given map
+	 * @param roleMap Mapping of roles from one world to another
+	 * @return A copy of this type, with mapped roles
+	 */
 	public DType copyWithMapping( Map< String, String > roleMap ){
 		List< String > roles = Mapper.map( this.roles, roleMap::get );
 		assert !roles.contains( null );

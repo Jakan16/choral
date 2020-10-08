@@ -2,6 +2,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.List;
 
+/**
+ * Node for return statement, holds the return type of the method it is returning in
+ */
 public class DReturn extends DNode {
 
 	private final DType returnType;

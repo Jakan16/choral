@@ -1,16 +1,15 @@
 package org.choral.compiler.dependencygraph.symboltable;
 
-import org.choral.ast.Name;
-import org.choral.ast.body.Field;
-import org.choral.ast.body.MethodDefinition;
-import org.choral.ast.type.FormalTypeParameter;
-import org.choral.ast.type.FormalWorldParameter;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * This {@link Template} represents and unknown time, and is assumed to be over a single role with
+ * no fields or methods.
+ */
 public class UnknownTemplate extends Template {
 
 	static final Template unknownTemplate = new UnknownTemplate();
@@ -24,11 +23,11 @@ public class UnknownTemplate extends Template {
 		return Collections.emptyList();
 	}
 
-	private final List< FormalWorldParameter > worldParams;
+	private final List< String > worldParams;
 
 	UnknownTemplate() {
 		super( null, null, Collections.emptyList() );
-		worldParams = Collections.singletonList( new FormalWorldParameter( new Name( "A" ) ) );
+		worldParams = Collections.singletonList( "A" );
 	}
 
 	@Override
@@ -52,22 +51,12 @@ public class UnknownTemplate extends Template {
 	}
 
 	@Override
-	public List< FormalWorldParameter > worldParameters() {
+	public List< String > worldParameters() {
 		return worldParams;
 	}
 
 	@Override
-	public List< FormalTypeParameter > typeParameters() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List< ? extends MethodDefinition > methodDefinitions() {
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List< Field > fields() {
+	public List< String > typeParameters() {
 		return Collections.emptyList();
 	}
 }

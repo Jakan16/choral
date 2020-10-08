@@ -5,6 +5,9 @@ import org.choral.ast.visitors.PrettyPrinterVisitor;
 
 import java.util.List;
 
+/**
+ * Base class for dependency graph notes
+ */
 public abstract class DNode {
 
 	private Node source;
@@ -32,6 +35,10 @@ public abstract class DNode {
 		this.source = source;
 	}
 
+	/**
+	 * The resulting type of the completed expression
+	 * @return The resulting type
+	 */
 	public abstract DType getType();
 
 	@Override

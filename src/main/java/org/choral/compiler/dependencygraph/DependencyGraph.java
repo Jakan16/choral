@@ -20,8 +20,12 @@ import org.choral.compiler.dependencygraph.symboltable.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Creates a graph for the dependencies required to complete an expression.
+ */
 public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
+	// used to resolve identifiers
 	private final Context context;
 
 	public DependencyGraph( Collection< CompilationUnit > cus,
@@ -30,11 +34,17 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		this.context = new Context( cus, headerUnits );
 	}
 
+	/**
+	 * Creates a dependency graph for a set of {@link CompilationUnit}'s
+	 * @param cus The units of the source code
+	 * @param headerUnits The units from header files
+	 */
 	public static void walk(
 			Collection< CompilationUnit > cus,
 			Collection< CompilationUnit > headerUnits
 	){
 		List< DNode > roots = new ArrayList<>();
+		// walk all source nodes
 		for( CompilationUnit cu: cus ) {
 			roots.addAll( new DependencyGraph( cus, headerUnits ).visit( cu ) );
 		}
@@ -77,6 +87,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > nodes = new ArrayList<>();
 		ContextFrame frame = context.currentFrame();
 		for( ClassMethodDefinition definition: n.methods() ){
+			// the context frame stack may change during a visit to a method,
+			// but should return to the original state when the visit finishes.
 			assert frame == context.currentFrame();
 			frame.setCurrentMethod( context.currentTem().getMethodSig( definition ) );
 			nodes.addAll( definition.accept( this ) );
@@ -123,11 +135,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	public List< DNode > visit( ScopedExpression n ) {
 		List< DNode > dependencies = new ArrayList<>( safeVisit( n.scope() ) );
 		assert dependencies.size() == 1;
-		context.pushContextOf( dependencies.get( 0 ) );
+		context.pushContextOf( dependencies.get( 0 ) ); // pushes context of the scope
 		List< DNode > scopedExp = safeVisit( n.scopedExpression() );
 		dependencies.addAll( scopedExp );
 		context.popFrame();
 		if( dependencies.get( 0 ) instanceof DThis ){
+			// This and Super has no role information,
+			// and the graph can be simplified by omitting these.
 			return scopedExp;
 		}
 		return Collections.singletonList( new DExpression( dependencies, "ScopedExpression" ) );
@@ -172,6 +186,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	public List< DNode > visit( ReturnStatement n ) {
 		List< DNode > dependencies = new ArrayList<>( n.returnExpression().accept( this ) );
 		List< DNode > nodes = new ArrayList<>();
+		// create explicit return node, as the return may be required to be at specific roles
 		nodes.add( new DReturn( dependencies, context.currentFrame().getReturnType() ) );
 		nodes.addAll( n.continuation().accept( this ) );
 		return nodes;
@@ -218,7 +233,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( StaticAccessExpression n ) {
-		return Collections.singletonList( new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) ) );
+		return Collections.singletonList(
+				new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) ) );
 	}
 
 	@Override
@@ -226,6 +242,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		Template.MethodSig sig = context.currentTem().getMethodSig( n );
 		DType mrt = context.mapType( sig.getReturnType() );
 
+		// return may have the type of a generic given by the function,
+		// if this is the case the instance of the generic must be used.
 		for( int i = 0; i < sig.getTypeParameters().size(); i++ ) {
 			if( sig.getReturnType().getTem() == sig.getTypeParameters().get( i ) ){
 				DType rrt = context.getTypeOfExpression( n.typeArguments().get( i ) );
@@ -237,6 +255,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > arguments = new ArrayList<>();
 
 		for( Expression exp: n.arguments() ){
+			// Each argument must be resolved in the context of the currently processed class
+			// and not the class of the method.
 			this.context.pushRootFrame();
 			arguments.addAll( exp.accept( this ) );
 			this.context.popFrame();
@@ -252,6 +272,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	public List< DNode > visit( ClassInstantiationExpression n ) {
 		List< DNode > dependencies = new ArrayList<>();
 
+		// Each argument must be resolved in the context of the currently processed class
+		// and not the class of the constructor.
 		for( Expression exp: n.arguments() ){
 			this.context.pushRootFrame();
 			dependencies.addAll( exp.accept( this ) );
@@ -259,10 +281,11 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		}
 
 		DType type = context.getTypeOfExpression( n.typeExpression() );
+		// get the used constructor for the instantiation
+		// to get the destination roles of the arguments.
 		Template.MethodSig sig = type.getTem().getConstructorSig( n.arguments().size() );
 		Map< String, String > roleMap = Mapper.mapping(
-				type.getTem().worldParameters(), type.getRoles(),
-				p -> p.toWorldArgument().name().identifier(), Mapper.id() );
+				type.getTem().worldParameters(), type.getRoles() );
 		List< DType > parameters = Mapper.map( sig.getParameters(),
 				p -> new DType( p.getTem(),
 						Mapper.map( p.getRoles(), roleMap::get ),
@@ -278,7 +301,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( NotExpression n ) {
-		return Collections.singletonList( new DExpression( n.expression().accept( this ), "NotExpression" ) );
+		return Collections.singletonList( new DExpression( n.expression().accept( this ),
+				"NotExpression" ) );
 	}
 
 	@Override
@@ -363,6 +387,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( ClassMethodDefinition n ) {
 		context.enterScope();
+		// The signature must be visited to add its symbols to the symbol table,
+		// the result is not needed for the graph.
 		n.signature().accept( this );
 		List< DNode > nodes = n.body().map( this::visit ).orElse( Collections.emptyList() );
 		context.exitScope();
@@ -383,6 +409,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( ConstructorDefinition n ) {
 		context.enterScope();
+		// The signature must be visited to add its symbols to the symbol table,
+		// the result is not needed for the graph.
 		n.signature().accept( this );
 		List< DNode > nodes = n.body().accept( this );
 		context.exitScope();
@@ -397,6 +425,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( VariableDeclaration n ) {
+		// Not needed for the final graph,
+		// but used for resolving identifiers.
 		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
 		return Collections.emptyList();
 	}
@@ -426,10 +456,14 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		throw new UnsupportedOperationException();
 	}
 
-	public static List< String > mapWorldToString( List< WorldArgument > worldArguments ){
+	private static List< String > mapWorldToString( List< WorldArgument > worldArguments ){
 		return Mapper.map( worldArguments, w -> w.name().identifier() );
 	}
 
+	/**
+	 * Represent the context of a class, and it's generics and currently processed method.
+	 * Also does mapping of roles from a foreign class into the world of its container.
+	 */
 	private static class ContextFrame {
 		private final Template tem;
 		private final Map< String, String > roleMap;
@@ -437,35 +471,59 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		private Template.MethodSig methodSig;
 		private Map< String, DType > funcGenericMap = Collections.emptyMap();
 
+		/**
+		 * Creates a new context for the given {@link Template}.
+		 * Roles are mapped to themselves, and should only be used for the root frame.
+		 * @param tem The {@link Template} to create a context over.
+		 */
 		public ContextFrame( Template tem ) {
 			assert tem != null;
 			this.tem = tem;
 
-			roleMap = Mapper.idMap(
-					tem.worldParameters(),
-					w -> w.toWorldArgument().name().identifier() );
+			// map roles to themselves
+			roleMap = Mapper.idMap(	tem.worldParameters() );
+			// The actual type of the generics cannot be know at this time.
 			genericMap = Collections.emptyMap();
 		}
-
+		/**
+		 * Creates a new context for the given {@link DType}.
+		 * <br><br>
+		 * Roles are mapped from the world of the {@link Template}
+		 * of the {@link DType} to the world of the given {@link DType}.
+		 * <br>
+		 * The type parameters are mapped to the type arguments of the given {@link DType}.
+		 * @param t The type to create a context over.
+		 */
 		public ContextFrame( DType t ) {
 			Template tem = t.getTem();
 			assert tem != null;
 			this.tem = tem;
 
-			roleMap = Mapper.mapping( tem.worldParameters(), t.getRoles(),
-					w -> w.toWorldArgument().name().identifier(), Mapper.id() );
+			roleMap = Mapper.mapping( tem.worldParameters(), t.getRoles() );
 			if( t.getTypeArguments().isEmpty() ){
+				// static references does not provide type arguments,
+				// even if the list of type parameters is not empty.
 				genericMap = Collections.emptyMap();
 			}else {
-				genericMap = Mapper.mapping( tem.typeParameters(), t.getTypeArguments(),
-						a -> a.name().identifier(), Mapper.id() );
+				genericMap = Mapper.mapping( tem.typeParameters(), t.getTypeArguments() );
 			}
 		}
 
+		/**
+		 * Resolves an identifier using this context.
+		 * @param identifier The name of the symbol.
+		 * @return A {@link Template} representing the symbol.
+		 */
 		public Template resolveIdentifier( String identifier ) {
 			return tem.resolveIdentifier( identifier );
 		}
 
+		/**
+		 * Replaces a generic with a value from type arguments if given.
+		 * May be another generic or the generic itself.
+		 * @param identifier the name of the generic
+		 * @return The type of the generic
+		 */
 		public DType replaceGeneric( String identifier ){
 			DType tNode = this.funcGenericMap.get( identifier );
 			if( tNode != null ){
@@ -474,26 +532,40 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return this.genericMap.get( identifier );
 		}
 
-		public void setFuncGenericMap( List< ? extends Template > generics ){
+		private void setFuncGenericMap( List< ? extends Template > generics ){
 			funcGenericMap = Mapper.mapping( generics, Template::getName,
 					g -> new DType( g, Collections.emptyList(), Collections.emptyList() ) );
 		}
 
+		/**
+		 * Set the method currently processed.
+		 * @param methodSig The signature of the method currently being processed.
+		 */
 		public void setCurrentMethod( Template.MethodSig methodSig ){
 			setFuncGenericMap( methodSig.getTypeParameters() );
 			this.methodSig = methodSig;
 		}
 
+		/**
+		 * Removes all method specific mappings and symbols
+		 */
 		public void clearCurrentMethod(){
 			setFuncGenericMap( Collections.emptyList() );
 			this.methodSig = null;
 		}
 
+		/**
+		 * The return type of the method currently being processed.
+		 * @return the return type of the method currently being processed.
+		 */
 		public DType getReturnType(){
 			return methodSig.getReturnType();
 		}
 	}
 
+	/**
+	 * Keeps track of the context frame stack, and symbol table
+	 */
 	private static class Context {
 		private final SymbolTable symbolTable;
 		private final Deque< ContextFrame > contextFrames;
@@ -508,6 +580,12 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.contextFrames = new ArrayDeque<>();
 		}
 
+		/**
+		 * Maps a type's roles and generics from another class
+		 * into the class of the current context.
+		 * @param type The source type
+		 * @return A new type mapped for the current context
+		 */
 		private DType mapType( DType type ){
 			if( type.getTem().isGeneric() ){
 				DType replaceType = currentFrame().replaceGeneric( type.getName() );
@@ -533,6 +611,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		}
 
 		public void pushRootFrame(){
+			// soft resets the stack for resolving arguments.
 			this.contextFrames.addFirst( rootFrame() );
 		}
 
@@ -546,7 +625,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		}
 
 		public void enterScope(){
-			assert contextFrames.size() == 1;
+			assert contextFrames.size() == 1; // scope cannot change in a context other than root
 			symbolTable.enterScope();
 		}
 
@@ -567,8 +646,14 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			return currentFrame().tem;
 		}
 
-		public DNode resolveIdentifier(String identifier){
+		/**
+		 * Resolves an identifier for a variable or field
+		 * @param identifier the name of the variable or field
+		 * @return A node representing the variable or field
+		 */
+		public DNode resolveIdentifier( String identifier ){
 			if( rootFrame() == currentFrame() ){
+				// Symbol table can only be accessed if the root frame is the current frame.
 				DVariable node = symbolTable.getSymbol( identifier );
 				if( node != null ){
 					return node;
@@ -591,6 +676,11 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			}
 		}
 
+		/**
+		 * Maps a {@link TypeExpression} to {@link DType}
+		 * @param n the type to map
+		 * @return an mapped type
+		 */
 		public DType getTypeOfExpression( TypeExpression n ){
 			List< DType > typeArgs = new ArrayList<>();
 			for( TypeExpression t: n.typeArguments() ){

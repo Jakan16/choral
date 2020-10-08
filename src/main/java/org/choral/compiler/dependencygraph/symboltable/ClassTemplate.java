@@ -5,13 +5,15 @@ import org.choral.ast.body.Class;
 import org.choral.ast.body.ConstructorDefinition;
 import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
-import org.choral.ast.type.FormalTypeParameter;
-import org.choral.ast.type.FormalWorldParameter;
+import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Template for a class
+ */
 public class ClassTemplate extends Template {
 	private final Class classNode;
 
@@ -34,13 +36,14 @@ public class ClassTemplate extends Template {
 	}
 
 	@Override
-	public List< FormalWorldParameter > worldParameters(){
-		return classNode.worldParameters();
+	public List< String > worldParameters(){
+		return Mapper.map( classNode.worldParameters(),
+				w -> w.toWorldArgument().name().identifier() );
 	}
 
 	@Override
-	public List< FormalTypeParameter > typeParameters(){
-		return classNode.typeParameters();
+	public List< String > typeParameters(){
+		return Mapper.map( classNode.typeParameters(), t -> t.name().identifier() );
 	}
 
 	@Override

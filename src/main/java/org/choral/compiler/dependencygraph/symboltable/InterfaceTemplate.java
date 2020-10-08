@@ -1,17 +1,17 @@
 package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.ast.ImportDeclaration;
-import org.choral.ast.body.Field;
 import org.choral.ast.body.Interface;
 import org.choral.ast.body.MethodDefinition;
-import org.choral.ast.type.FormalTypeParameter;
-import org.choral.ast.type.FormalWorldParameter;
+import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
-import java.util.Collections;
 import java.util.List;
 
+/**
+ * Template for an interface
+ */
 public class InterfaceTemplate extends Template {
 	private final Interface interfaceNode;
 
@@ -41,13 +41,13 @@ public class InterfaceTemplate extends Template {
 	}
 
 	@Override
-	public List< FormalWorldParameter > worldParameters() {
-		return interfaceNode.worldParameters();
+	public List< String > worldParameters() {
+		return Mapper.map( interfaceNode.worldParameters(), w -> w.toWorldArgument().name().identifier() );
 	}
 
 	@Override
-	public List< FormalTypeParameter > typeParameters() {
-		return interfaceNode.typeParameters();
+	public List< String > typeParameters() {
+		return Mapper.map( interfaceNode.typeParameters(), t -> t.name().identifier() );
 	}
 
 	@Override
@@ -55,8 +55,4 @@ public class InterfaceTemplate extends Template {
 		return interfaceNode.methods();
 	}
 
-	@Override
-	public List< Field > fields() {
-		return Collections.emptyList();
-	}
 }

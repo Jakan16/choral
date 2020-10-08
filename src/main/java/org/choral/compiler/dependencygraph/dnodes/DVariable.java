@@ -3,6 +3,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Node for a variable
+ */
 public class DVariable extends DNode {
 
 	private final DType type;

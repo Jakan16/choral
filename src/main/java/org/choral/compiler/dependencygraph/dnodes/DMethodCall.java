@@ -3,6 +3,9 @@ package org.choral.compiler.dependencygraph.dnodes;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * A node for method calls
+ */
 public class DMethodCall extends DNode {
 
 	private List<String> roles;
