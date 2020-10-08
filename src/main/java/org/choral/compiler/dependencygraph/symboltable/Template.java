@@ -95,9 +95,12 @@ public abstract class Template {
 
 	private List< MethodSig > deriveConstructorSigs(){
 		List< MethodSig > constructorSigs = constructorDefinitions().stream()
-				.map( ConstructorDefinition::signature ).map( s -> new MethodSig( s, this ) )
-				.collect( Collectors.toList() );
-		constructorSigs.add( new MethodSig( getName(), Collections.emptyList(), Collections.emptyList(), null ) );
+				.map( ConstructorDefinition::signature )
+				.map( s -> new MethodSig( s, this ) ).collect( Collectors.toList() );
+		constructorSigs.add( new MethodSig( getName(),
+				Collections.emptyList(),
+				Collections.emptyList(),
+				null ) );
 		return constructorSigs;
 	}
 
@@ -121,7 +124,7 @@ public abstract class Template {
 			return;
 		}
 
-		Package javaLang = holdingPackage.getRoot().getPackage( "java.lang" );
+		Package javaLang = holdingPackage.getRoot().getPackage( PackageHandler.langPath );
 		for( Template def: javaLang.getTemplates() ){
 			knownSymbols.put( def.getName(), def );
 		}
@@ -148,6 +151,10 @@ public abstract class Template {
 		}
 	}
 
+	private Template getPrimitive( String identifier ){
+		return holdingPackage.getPackageHandler().getPrimitive( identifier );
+	}
+
 	public Template resolveIdentifier( String identifier ){
 		prepare();
 		Template tem = knownSymbols.get( identifier );
@@ -158,7 +165,7 @@ public abstract class Template {
 		if( tem != null ){
 			return tem;
 		}
-		return Template.unknownTemplate();
+		return getPrimitive( identifier );
 	}
 
 	protected DType typeExpressionToNode( TypeExpression typeExpression ){

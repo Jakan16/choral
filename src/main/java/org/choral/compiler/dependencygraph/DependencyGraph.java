@@ -75,12 +75,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( Class n ) {
 		List< DNode > nodes = new ArrayList<>();
+		ContextFrame frame = context.currentFrame();
 		for( ClassMethodDefinition definition: n.methods() ){
-			context.currentFrame().setFuncGenericMap(
-					context.currentTem().getMethodSig( definition ).getTypeParameters() );
+			assert frame == context.currentFrame();
+			frame.setCurrentMethod( context.currentTem().getMethodSig( definition ) );
 			nodes.addAll( definition.accept( this ) );
 		}
-		context.currentFrame().setFuncGenericMap( Collections.emptyList() );
+		frame.clearCurrentMethod();
 
 		for( ConstructorDefinition definition: n.constructors() ){
 			nodes.addAll( definition.accept( this ) );
@@ -169,7 +170,9 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( ReturnStatement n ) {
-		List< DNode > nodes = new ArrayList<>( n.returnExpression().accept( this ) );
+		List< DNode > dependencies = new ArrayList<>( n.returnExpression().accept( this ) );
+		List< DNode > nodes = new ArrayList<>();
+		nodes.add( new DReturn( dependencies, context.currentFrame().getReturnType() ) );
 		nodes.addAll( n.continuation().accept( this ) );
 		return nodes;
 	}
@@ -431,6 +434,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		private final Template tem;
 		private final Map< String, String > roleMap;
 		private final Map< String, DType > genericMap;
+		private Template.MethodSig methodSig;
 		private Map< String, DType > funcGenericMap = Collections.emptyMap();
 
 		public ContextFrame( Template tem ) {
@@ -474,6 +478,20 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			funcGenericMap = Mapper.mapping( generics, Template::getName,
 					g -> new DType( g, Collections.emptyList(), Collections.emptyList() ) );
 		}
+
+		public void setCurrentMethod( Template.MethodSig methodSig ){
+			setFuncGenericMap( methodSig.getTypeParameters() );
+			this.methodSig = methodSig;
+		}
+
+		public void clearCurrentMethod(){
+			setFuncGenericMap( Collections.emptyList() );
+			this.methodSig = null;
+		}
+
+		public DType getReturnType(){
+			return methodSig.getReturnType();
+		}
 	}
 
 	private static class Context {
@@ -512,10 +530,6 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 		public void pushFrame( DType t ){
 			this.contextFrames.addFirst( new ContextFrame( t ) );
-		}
-
-		public void pushCurrentFrame(){
-			this.contextFrames.addFirst( this.contextFrames.getFirst() );
 		}
 
 		public void pushRootFrame(){
