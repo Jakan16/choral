@@ -12,8 +12,13 @@ public class DMethodCall extends DNode {
 	private final DType returnType;
 	private final List< DType > parameters;
 
-	public DMethodCall( List< DNode > dependencies, DType returnType, List< DType > parameters ) {
-		super( dependencies, "MethodCallDNode" );
+	public DMethodCall(
+			String name,
+			List< DNode > dependencies,
+			DType returnType,
+			List< DType > parameters
+	) {
+		super( dependencies, name );
 		this.returnType = returnType;
 		this.parameters = parameters;
 	}
@@ -27,6 +32,11 @@ public class DMethodCall extends DNode {
 	}
 
 	@Override
+	public < R > R accept( DNodeVisitorInterface< R > v ) {
+		return v.visit( this );
+	}
+
+	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append( getName() );
@@ -34,8 +44,9 @@ public class DMethodCall extends DNode {
 		if( getRoles() != null ){
 			sb.append( "@(" ).append( String.join( ", ", getRoles() ) ).append( ") " );
 		}
-		sb.append( returnType.toString() ).append( " (" )
-		.append( parameters.stream().map( DType::toString ).collect( Collectors.joining( ", " ) ) )
+		sb.append( "r:" ).append( returnType.toString() ).append( " p:(" )
+		.append( parameters.stream().map( DType::toString )
+				.collect( Collectors.joining( ", " ) ) )
 		.append( ")" );
 
 		return sb.toString();

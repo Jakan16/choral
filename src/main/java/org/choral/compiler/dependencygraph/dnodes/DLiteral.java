@@ -8,35 +8,27 @@ import java.util.List;
  */
 public class DLiteral extends DNode{
 
-	private final String literalType;
-	private List< String > roles;
+	private final DType type;
 
-	public DLiteral( String type ) {
-		super( Collections.emptyList(), type );
-		this.literalType = type;
+	public DLiteral( DType type ) {
+		super( Collections.emptyList(), type.getName() );
+		this.type = type;
 	}
 
-	public String getLiteralType() {
-		return literalType;
-	}
-
-	public List< String > getRoles() {
-		return roles;
-	}
-
-	public void setRole( List< String > roles ) {
-		this.roles = roles;
+	@Override
+	public < R > R accept( DNodeVisitorInterface< R > v ) {
+		return v.visit( this );
 	}
 
 	@Override
 	public DType getType() {
-		throw new UnsupportedOperationException();
+		return this.type;
 	}
 
 	@Override
 	public String toString() {
-		if( getRoles() != null ){
-			return getName() + "@(" + String.join( ", ", getRoles() ) + ")" + super.toString();
+		if( !getType().getRoles().isEmpty() ){
+			return getName() + "@(" + String.join( ", ", getType().getRoles() ) + ")" + super.toString();
 		}
 		return getName() + " " + super.toString();
 	}

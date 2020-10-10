@@ -1,7 +1,6 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.Collections;
-import java.util.List;
 
 /**
  * Node for a variable
@@ -15,8 +14,9 @@ public class DVariable extends DNode {
 		this.type = type;
 	}
 
-	public List< String > getRoles() {
-		return type.getRoles();
+	@Override
+	public < R > R accept( DNodeVisitorInterface< R > v ) {
+		return v.visit( this );
 	}
 
 	@Override

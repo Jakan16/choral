@@ -28,6 +28,11 @@ public class DClassInstantiation extends DNode {
 	}
 
 	@Override
+	public < R > R accept( DNodeVisitorInterface< R > v ) {
+		return v.visit( this );
+	}
+
+	@Override
 	public String toString() {
 		return type.toString() + " (" + this.parameters.stream().map( DType::toString )
 				.collect( Collectors.joining( ", " ) ) + ")";

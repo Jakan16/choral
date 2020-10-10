@@ -49,6 +49,8 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			roots.addAll( new DependencyGraph( cus, headerUnits ).visit( cu ) );
 		}
 
+		GraphSolver.solve( roots );
+
 		for( DNode dNode: roots ){
 			print(dNode, 0);
 			System.out.println("---------------");
@@ -211,8 +213,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		List< DNode > dependencies = new ArrayList<>();
 		dependencies.addAll( safeVisit( n.left() ) );
 		dependencies.addAll( safeVisit( n.right() ) );
-		DExpression dExpression = new DExpression( dependencies, "BinaryExpression" );
-		return Collections.singletonList( dExpression );
+		return Collections.singletonList( new DBinaryExpression( dependencies, n.operator() ) );
 	}
 
 	@Override
@@ -262,7 +263,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			this.context.popFrame();
 		}
 
-		DMethodCall node = new DMethodCall( arguments, mrt,
+		DMethodCall node = new DMethodCall( sig.getName(), arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
 		node.setRole( mrt.getRoles() );
 		return Collections.singletonList( node );
@@ -317,9 +318,9 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( NullExpression n ) {
-		DLiteral node = new DLiteral( "NullExpression" );
-		node.setRole( mapWorldToString( n.worlds() ) );
-		return Collections.singletonList( node );
+		Template nullTemplate = context.currentFrame().resolveIdentifier( "null" );
+		DType type = new DType( nullTemplate, mapWorldToString( n.worlds() ), Collections.emptyList() );
+		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
@@ -336,31 +337,26 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( LiteralExpression.BooleanLiteralExpression n ) {
-		DLiteral node = new DLiteral( "BooleanLiteralExpression" );
-		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
-		return Collections.singletonList( node );
+		DType type = context.getTypeFromName( "bool", n.world().name().identifier() );
+		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.DoubleLiteralExpression n ) {
-		DLiteral node = new DLiteral( "DoubleLiteralExpression" );
-		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
-		return Collections.singletonList( node );
+		DType type = context.getTypeFromName( "double", n.world().name().identifier() );
+		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.IntegerLiteralExpression n ) {
-		DLiteral node = new DLiteral( "IntegerLiteralExpression" );
-		node.setSource( n );
-		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
-		return Collections.singletonList( node );
+		DType type = context.getTypeFromName( "int", n.world().name().identifier() );
+		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.StringLiteralExpression n ) {
-		DLiteral node = new DLiteral( "StringLiteralExpression" );
-		node.setRole( Collections.singletonList( n.world().name().identifier() ) );
-		return Collections.singletonList( node );
+		DType type = context.getTypeFromName( "String", n.world().name().identifier() );
+		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
@@ -674,6 +670,12 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			}else {
 				pushFrame( node.getType() );
 			}
+		}
+
+		public DType getTypeFromName( String primitiveName, String role ){
+			return new DType( currentFrame().resolveIdentifier( primitiveName ),
+					Collections.singletonList( role ),
+					Collections.emptyList() );
 		}
 
 		/**

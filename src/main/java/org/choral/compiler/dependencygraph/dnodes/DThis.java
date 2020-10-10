@@ -14,6 +14,11 @@ public class DThis extends DNode {
 	}
 
 	@Override
+	public < R > R accept( DNodeVisitorInterface< R > v ) {
+		return v.visit( this );
+	}
+
+	@Override
 	public DType getType() {
 		throw new UnsupportedOperationException();
 	}

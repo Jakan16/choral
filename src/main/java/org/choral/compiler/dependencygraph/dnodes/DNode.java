@@ -13,6 +13,7 @@ public abstract class DNode {
 	private Node source;
 	private final List< DNode > dependencies;
 	private final String name;
+	private DType resultingType;
 
 	public DNode( List< DNode > dependencies, String name ) {
 		this.dependencies = dependencies;
@@ -35,11 +36,30 @@ public abstract class DNode {
 		this.source = source;
 	}
 
+
+	/**
+	 * The type to the extent it is known from the source code
+	 * @return the known non-inferred type
+	 */
+	public abstract DType getType();
+
 	/**
 	 * The resulting type of the completed expression
 	 * @return The resulting type
 	 */
-	public abstract DType getType();
+	public DType getResultingType() {
+		return resultingType;
+	}
+
+	/**
+	 * Set the resulting type of the completed expression
+	 * @param resultingType The resulting type
+	 */
+	public void setResultingType( DType resultingType ) {
+		this.resultingType = resultingType;
+	}
+
+	public abstract < R > R accept( DNodeVisitorInterface< R > v );
 
 	@Override
 	public String toString() {
