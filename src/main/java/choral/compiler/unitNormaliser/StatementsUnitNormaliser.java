@@ -58,9 +58,25 @@ public class StatementsUnitNormaliser extends AbstractChoralVisitor< Statement >
 
 	@Override
 	public Statement visit( BlockStatement n ) {
+		Statement enclosedStatement = visit( n.enclosedStatement() );
+		Statement continuation = visit( n.continuation() );
+
+		// remove empty blocks
+		if( enclosedStatement instanceof NilStatement ){
+			return continuation;
+		}
+
+		// Unwrap blocks with no continuation
+		// The block statement may itself be a continuation, which will change the scoping.
+		// This does not matter however,
+		// because any declared variable cannot be used in the continuation, as there aren't any.
+		if( continuation instanceof NilStatement ){
+			return enclosedStatement;
+		}
+
 		return new BlockStatement(
-				visit( n.enclosedStatement() ),
-				visit( n.continuation() )
+				enclosedStatement,
+				continuation
 		).copyPosition( n );
 	}
 
