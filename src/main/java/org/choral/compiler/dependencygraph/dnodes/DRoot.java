@@ -6,8 +6,11 @@ import java.util.List;
 
 public class DRoot extends DNode {
 
+	private final List< DNode > nodes;
+
 	private DRoot() {
-		super( Collections.emptyList(), "root" );
+		super( "root" );
+		nodes = Collections.emptyList();
 	}
 
 	public static final DRoot emptyRoot = new DRoot();
@@ -15,13 +18,14 @@ public class DRoot extends DNode {
 		return emptyRoot;
 	}
 
-	public DRoot( List< DNode > dependencies ) {
-		super( dependencies, "root" );
+	public DRoot( List< DNode > nodes ) {
+		super( "root" );
+		this.nodes = nodes;
 	}
 
 	public DRoot merge( DRoot other ){
-		var nodes = new ArrayList<>( getDependencies() );
-		nodes.addAll( other.getDependencies() );
+		var nodes = new ArrayList<>( getNodes() );
+		nodes.addAll( other.getNodes() );
 		return new DRoot( nodes );
 	}
 
@@ -31,9 +35,13 @@ public class DRoot extends DNode {
 			return merge( (DRoot) other );
 		}
 
-		var nodes = new ArrayList<>( getDependencies() );
+		var nodes = new ArrayList<>( getNodes() );
 		nodes.add( other );
 		return new DRoot( nodes );
+	}
+
+	public List< DNode > getNodes() {
+		return nodes;
 	}
 
 	@Override

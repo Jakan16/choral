@@ -10,14 +10,16 @@ public class DMethodCall extends DNode {
 
 	private final DType returnType;
 	private final List< DType > parameters;
+	private final List< DNode > arguments;
 
 	public DMethodCall(
 			String name,
-			List< DNode > dependencies,
+			List< DNode > arguments,
 			DType returnType,
 			List< DType > parameters
 	) {
-		super( dependencies, name );
+		super( name );
+		this.arguments = arguments;
 		this.returnType = returnType;
 		this.parameters = parameters;
 	}
@@ -25,6 +27,18 @@ public class DMethodCall extends DNode {
 	@Override
 	public < R > R accept( DNodeVisitorInterface< R > v ) {
 		return v.visit( this );
+	}
+
+	public DType getReturnType() {
+		return returnType;
+	}
+
+	public List< DType > getParameters() {
+		return parameters;
+	}
+
+	public List< DNode > getArguments() {
+		return arguments;
 	}
 
 	@Override

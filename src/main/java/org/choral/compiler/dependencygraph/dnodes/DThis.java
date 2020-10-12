@@ -1,7 +1,5 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
-import java.util.Collections;
-
 /**
  * Node for super and this keyword.
  * Does not have roles or a type,
@@ -10,7 +8,7 @@ import java.util.Collections;
 public class DThis extends DNode {
 
 	public DThis() {
-		super( Collections.emptyList(), "this or super" );
+		super( "this or super" );
 	}
 
 	@Override

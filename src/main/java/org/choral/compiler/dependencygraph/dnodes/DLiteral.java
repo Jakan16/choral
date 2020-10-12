@@ -1,7 +1,5 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -12,7 +10,7 @@ public class DLiteral extends DNode{
 	private final DType type;
 
 	public DLiteral( DType type ) {
-		super( Collections.emptyList(), type.getName() );
+		super( type.getName() );
 		this.type = type;
 	}
 

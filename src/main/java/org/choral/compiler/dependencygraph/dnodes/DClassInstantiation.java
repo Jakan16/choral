@@ -10,14 +10,16 @@ public class DClassInstantiation extends DNode {
 
 	private final DType type;
 	private final List< DType > parameters;
+	private final List< DNode > arguments;
 
 	public DClassInstantiation(
-			List< DNode > dependencies,
+			List< DNode > arguments,
 			String name,
 			DType type,
 			List< DType > parameters
 	) {
-		super( dependencies, name );
+		super( name );
+		this.arguments = arguments;
 		this.type = type;
 		this.parameters = parameters;
 	}
@@ -30,6 +32,14 @@ public class DClassInstantiation extends DNode {
 	@Override
 	public < R > R accept( DNodeVisitorInterface< R > v ) {
 		return v.visit( this );
+	}
+
+	public List< DType > getParameters() {
+		return parameters;
+	}
+
+	public List< DNode > getArguments() {
+		return arguments;
 	}
 
 	@Override

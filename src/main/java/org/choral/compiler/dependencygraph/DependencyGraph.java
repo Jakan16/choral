@@ -52,22 +52,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		//GraphSolver.solve( roots );
 
-		for( DNode dNode: root.getDependencies() ){
-			print(dNode, 0);
-			System.out.println("---------------");
-		}
-	}
-
-	private static void print( DNode node, int indent ){
-		assert !( node instanceof DRoot );
-		for( int i = 0; i < indent; i++ ) {
-			System.out.print("    ");
-		}
-
-		System.out.println(node.toString());
-		for( DNode dNode: node.getDependencies() ){
-			print( dNode, indent+1 );
-		}
+		System.out.println( DependencyGraphPrinter.walk( root ) );
 	}
 
 	@Override
@@ -187,7 +172,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( ReturnStatement n ) {
 		DNode returnExp = n.returnExpression().accept( this );
 		// create explicit return node, as the return may be required to be at specific roles
-		DNode returnNode = new DReturn( Collections.singletonList( returnExp ), context.currentFrame().getReturnType() );
+		DNode returnNode = new DReturn( returnExp, context.currentFrame().getReturnType() );
 		DNode continuation = n.continuation().accept( this );
 		return returnNode.merge( continuation );
 	}
@@ -207,10 +192,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( BinaryExpression n ) {
-		List< DNode > dependencies = new ArrayList<>();
-		dependencies.add( n.left().accept( this ) );
-		dependencies.add( n.right().accept( this ) );
-		return new DBinaryExpression( dependencies, n.operator() );
+		var left =  n.left().accept( this );
+		var right =  n.right().accept( this );
+		return new DBinaryExpression( left, right, n.operator() );
 	}
 
 	@Override

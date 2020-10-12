@@ -4,7 +4,6 @@ import org.choral.ast.Node;
 import org.choral.ast.visitors.PrettyPrinterVisitor;
 
 import java.util.Collections;
-import java.util.List;
 
 /**
  * Base class for dependency graph notes
@@ -12,17 +11,11 @@ import java.util.List;
 public abstract class DNode {
 
 	private Node source;
-	private final List< DNode > dependencies;
 	private final String name;
 	private DType resultingType;
 
-	public DNode( List< DNode > dependencies, String name ) {
-		this.dependencies = dependencies;
+	public DNode( String name ) {
 		this.name = name;
-	}
-
-	public List< DNode > getDependencies(){
-		return dependencies;
 	}
 
 	public String getName() {

@@ -17,6 +17,61 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DNode n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DClassInstantiation n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DExpression n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DLiteral n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DMethodCall n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DReturn n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DStaticAccess n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DThis n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DVariable n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DBinaryExpression n ) {
+		return null;
+	}
+
+	@Override
+	public Void visit( DRoot n ) {
+		return null;
+	}
+
+	/*@Override
+	public Void visit( DNode n ) {
 		return n.accept( this );
 	}
 
@@ -95,5 +150,5 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	public void visitAll( List< DNode > nodes ){
 		nodes.forEach( n -> n.accept( this ) );
-	}
+	}*/
 }

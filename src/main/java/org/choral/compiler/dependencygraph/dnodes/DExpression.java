@@ -7,17 +7,25 @@ import java.util.List;
  */
 public class DExpression extends DNode{
 
+	private final List< DNode > dependencies;
+
 	public DExpression( List< DNode > dependencies ) {
-		super( dependencies, "ExpressionDNode" );
+		super( "ExpressionDNode" );
+		this.dependencies = dependencies;
 	}
 
 	public DExpression( List< DNode > dependencies, String name ) {
-		super( dependencies, name );
+		super( name );
+		this.dependencies = dependencies;
 	}
 
 	@Override
 	public DType getType() {
-		return getDependencies().get( getDependencies().size()-1 ).getType();
+		return this.dependencies.get( this.dependencies.size() - 1 ).getType();
+	}
+
+	public List< DNode > getDependencies() {
+		return dependencies;
 	}
 
 	@Override

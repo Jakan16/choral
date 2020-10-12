@@ -1,7 +1,5 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
-import java.util.Collections;
-
 /**
  * Node for a variable
  */
@@ -10,7 +8,7 @@ public class DVariable extends DNode {
 	private final DType type;
 
 	public DVariable( String name, DType type ) {
-		super( Collections.emptyList(), name );
+		super( name );
 		this.type = type;
 	}
 
