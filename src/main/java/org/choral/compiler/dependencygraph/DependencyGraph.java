@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 /**
  * Creates a graph for the dependencies required to complete an expression.
  */
-public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
+public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	// used to resolve identifiers
 	private final Context context;
@@ -44,21 +44,22 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			Collection< CompilationUnit > cus,
 			Collection< CompilationUnit > headerUnits
 	){
-		List< DNode > roots = new ArrayList<>();
+		DRoot root = DRoot.emptyRoot();
 		// walk all source nodes
 		for( CompilationUnit cu: cus ) {
-			roots.addAll( new DependencyGraph( cus, headerUnits ).visit( cu ) );
+			root = root.merge( new DependencyGraph( cus, headerUnits ).visit( cu ) );
 		}
 
 		//GraphSolver.solve( roots );
 
-		for( DNode dNode: roots ){
+		for( DNode dNode: root.getDependencies() ){
 			print(dNode, 0);
 			System.out.println("---------------");
 		}
 	}
 
 	private static void print( DNode node, int indent ){
+		assert !( node instanceof DRoot );
 		for( int i = 0; i < indent; i++ ) {
 			System.out.print("    ");
 		}
@@ -70,177 +71,170 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	}
 
 	@Override
-	public List< DNode > visit( CompilationUnit n ) {
-		List< DNode > nodes = new LinkedList<>();
+	public DNode visit( CompilationUnit n ) {
+		DRoot nodes = DRoot.emptyRoot();
 		for( Class c : n.classes() ) {
 			this.context.pushFrame( n.packageDeclaration(), c );
-			nodes.addAll( visit( c ) );
+			nodes = nodes.merge( visit( c ) );
 			this.context.popFrame();
 		}
 		return nodes;
 	}
 
 	@Override
-	public List< DNode > visit( ImportDeclaration n ) {
+	public DNode visit( ImportDeclaration n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( Class n ) {
-		List< DNode > nodes = new ArrayList<>();
+	public DNode visit( Class n ) {
+		DRoot nodes = DRoot.emptyRoot();
 		ContextFrame frame = context.currentFrame();
 		for( ClassMethodDefinition definition: n.methods() ){
 			// the context frame stack may change during a visit to a method,
 			// but should return to the original state when the visit finishes.
 			assert frame == context.currentFrame();
 			frame.setCurrentMethod( context.currentTem().getMethodSig( definition ) );
-			nodes.addAll( definition.accept( this ) );
+			nodes = nodes.merge( definition.accept( this ) );
 		}
 		frame.clearCurrentMethod();
 
 		for( ConstructorDefinition definition: n.constructors() ){
-			nodes.addAll( definition.accept( this ) );
+			nodes = nodes.merge( definition.accept( this ) );
 		}
 
 		return nodes;
 	}
 
 	@Override
-	public List< DNode > visit( Enum n ) {
+	public DNode visit( Enum n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( Interface n ) {
+	public DNode visit( Interface n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( Statement n ) {
+	public DNode visit( Statement n ) {
 		return n.accept( this );
 	}
 
 	@Override
-	public List< DNode > visit( BlockStatement n ) {
+	public DNode visit( BlockStatement n ) {
 		context.enterScope();
-		List< DNode > nodes = new ArrayList<>( n.enclosedStatement().accept( this ) );
+		DNode nodes = n.enclosedStatement().accept( this );
 		context.exitScope();
-		nodes.addAll( n.continuation().accept( this ) );
+		nodes = nodes.merge( n.continuation().accept( this ) );
 		return nodes;
 	}
 
 	@Override
-	public List< DNode > visit( SelectStatement n ) {
+	public DNode visit( SelectStatement n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( ScopedExpression n ) {
-		List< DNode > dependencies = new ArrayList<>( safeVisit( n.scope() ) );
-		assert dependencies.size() == 1;
-		context.pushContextOf( dependencies.get( 0 ) ); // pushes context of the scope
-		List< DNode > scopedExp = safeVisit( n.scopedExpression() );
-		dependencies.addAll( scopedExp );
+	public DNode visit( ScopedExpression n ) {
+		DNode scope = n.scope().accept( this );
+		context.pushContextOf( scope ); // pushes context of the scope
+		DNode scopedExp = n.scopedExpression().accept( this );
 		context.popFrame();
-		if( dependencies.get( 0 ) instanceof DThis ){
+		if( scope instanceof DThis ){
 			// This and Super has no role information,
 			// and the graph can be simplified by omitting these.
 			return scopedExp;
 		}
-		return Collections.singletonList( new DExpression( dependencies, "ScopedExpression" ) );
+		return new DExpression( Arrays.asList( scope, scopedExp ), "ScopedExpression" );
 	}
 
 	@Override
-	public List< DNode > visit( ExpressionStatement n ) {
-		List< DNode > nodes = new ArrayList<>( n.expression().accept( this ) );
-		nodes.addAll( n.continuation().accept( this ) );
-		return nodes;
+	public DNode visit( ExpressionStatement n ) {
+		DNode exp = n.expression().accept( this );
+		return n.continuation().accept( this ).merge( exp );
 	}
 
 	@Override
-	public List< DNode > visit( IfStatement n ) {
-		List< DNode > nodes = new ArrayList<>( n.condition().accept( this ) );
+	public DNode visit( IfStatement n ) {
+		var guard = n.condition().accept( this );
 		context.enterScope();
-		nodes.addAll( n.ifBranch().accept( this ) );
+		var ifBranch = n.ifBranch().accept( this );
 		context.exitScope();
 		context.enterScope();
-		nodes.addAll( n.elseBranch().accept( this ) );
+		var elseBranch = n.elseBranch().accept( this );
 		context.exitScope();
-		nodes.addAll( n.continuation().accept( this ) );
-		return nodes;
+		var continuation = n.continuation().accept( this );
+		return guard.merge( ifBranch ).merge( elseBranch ).merge( continuation );
 	}
 
 	@Override
-	public List< DNode > visit( SwitchStatement n ) {
+	public DNode visit( SwitchStatement n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( TryCatchStatement n ) {
+	public DNode visit( TryCatchStatement n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( NilStatement n ) {
-		return Collections.emptyList();
+	public DNode visit( NilStatement n ) {
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( ReturnStatement n ) {
-		List< DNode > dependencies = new ArrayList<>( n.returnExpression().accept( this ) );
-		List< DNode > nodes = new ArrayList<>();
+	public DNode visit( ReturnStatement n ) {
+		DNode returnExp = n.returnExpression().accept( this );
 		// create explicit return node, as the return may be required to be at specific roles
-		nodes.add( new DReturn( dependencies, context.currentFrame().getReturnType() ) );
-		nodes.addAll( n.continuation().accept( this ) );
-		return nodes;
+		DNode returnNode = new DReturn( Collections.singletonList( returnExp ), context.currentFrame().getReturnType() );
+		DNode continuation = n.continuation().accept( this );
+		return returnNode.merge( continuation );
 	}
 
 	@Override
-	public List< DNode > visit( Expression n ) {
+	public DNode visit( Expression n ) {
 		return n.accept( this );
 	}
 
 	@Override
-	public List< DNode > visit( AssignExpression n ) {
+	public DNode visit( AssignExpression n ) {
 		List< DNode > dependencies = new ArrayList<>();
-		dependencies.addAll( safeVisit( n.value() ) );
-		dependencies.addAll( safeVisit( n.target() ) );
-		DExpression dExpression = new DExpression( dependencies, "AssignExpression" );
-		return Collections.singletonList( dExpression );
+		dependencies.add( n.value().accept( this ) );
+		dependencies.add( n.target().accept( this ) );
+		return new DExpression( dependencies, "AssignExpression" );
 	}
 
 	@Override
-	public List< DNode > visit( BinaryExpression n ) {
+	public DNode visit( BinaryExpression n ) {
 		List< DNode > dependencies = new ArrayList<>();
-		dependencies.addAll( safeVisit( n.left() ) );
-		dependencies.addAll( safeVisit( n.right() ) );
-		return Collections.singletonList( new DBinaryExpression( dependencies, n.operator() ) );
+		dependencies.add( n.left().accept( this ) );
+		dependencies.add( n.right().accept( this ) );
+		return new DBinaryExpression( dependencies, n.operator() );
 	}
 
 	@Override
-	public List< DNode > visit( EnumCaseInstantiationExpression n ) {
+	public DNode visit( EnumCaseInstantiationExpression n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( EnclosedExpression n ) {
-		return Collections.singletonList( new DExpression( safeVisit( n.nestedExpression() ),
-				"EnclosedExpression" ) );
+	public DNode visit( EnclosedExpression n ) {
+		return new DExpression( Collections.singletonList( n.nestedExpression().accept( this ) ), "EnclosedExpression" );
 	}
 
 	@Override
-	public List< DNode > visit( FieldAccessExpression n ) {
-		return Collections.singletonList( context.resolveIdentifier( n.name().identifier() ) );
+	public DNode visit( FieldAccessExpression n ) {
+		return context.resolveIdentifier( n.name().identifier() );
 	}
 
 	@Override
-	public List< DNode > visit( StaticAccessExpression n ) {
-		return Collections.singletonList(
-				new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) ) );
+	public DNode visit( StaticAccessExpression n ) {
+		return new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) );
 	}
 
 	@Override
-	public List< DNode > visit( MethodCallExpression n ) {
+	public DNode visit( MethodCallExpression n ) {
 		Template.MethodSig sig = context.currentTem().getMethodSig( n );
 		DType mrt = context.mapType( sig.getReturnType() );
 
@@ -260,24 +254,23 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			// Each argument must be resolved in the context of the currently processed class
 			// and not the class of the method.
 			this.context.pushRootFrame();
-			arguments.addAll( exp.accept( this ) );
+			arguments.add( exp.accept( this ) );
 			this.context.popFrame();
 		}
 
-		DMethodCall node = new DMethodCall( sig.getName(), arguments, mrt,
+		return new DMethodCall( sig.getName(), arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
-		return Collections.singletonList( node );
 	}
 
 	@Override
-	public List< DNode > visit( ClassInstantiationExpression n ) {
+	public DNode visit( ClassInstantiationExpression n ) {
 		List< DNode > dependencies = new ArrayList<>();
 
 		// Each argument must be resolved in the context of the currently processed class
 		// and not the class of the constructor.
 		for( Expression exp: n.arguments() ){
 			this.context.pushRootFrame();
-			dependencies.addAll( exp.accept( this ) );
+			dependencies.add( exp.accept( this ) );
 			this.context.popFrame();
 		}
 
@@ -291,164 +284,164 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 				p -> new DType( p.getTem(),
 						Mapper.map( p.getRoles(), roleMap::get ),
 						p.getTypeArguments() ) );
-		return Collections.singletonList(
-				new DClassInstantiation( dependencies, type.getName(), type, parameters ) );
+		return new DClassInstantiation( dependencies, type.getName(), type, parameters );
 	}
 
 	@Override
-	public List< DNode > visit( Name n ) {
+	public DNode visit( Name n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( NotExpression n ) {
-		return Collections.singletonList( new DExpression( n.expression().accept( this ),
-				"NotExpression" ) );
+	public DNode visit( NotExpression n ) {
+		return new DExpression( Collections.singletonList( n.expression().accept( this ) ), "NotExpression" );
+	}
+
+	private static final DThis thisNode = new DThis();
+	@Override
+	public DNode visit( ThisExpression n ) {
+		return thisNode;
 	}
 
 	@Override
-	public List< DNode > visit( ThisExpression n ) {
-		return Collections.singletonList( new DThis() );
+	public DNode visit( SuperExpression n ) {
+		return thisNode;
 	}
 
 	@Override
-	public List< DNode > visit( SuperExpression n ) {
-		return Collections.singletonList( new DThis() );
-	}
-
-	@Override
-	public List< DNode > visit( NullExpression n ) {
+	public DNode visit( NullExpression n ) {
 		Template nullTemplate = context.currentFrame().resolveIdentifier( "null" );
 		DType type = new DType( nullTemplate, context.mapWorldToString( n.worlds() ), Collections.emptyList() );
-		return Collections.singletonList( new DLiteral( type ) );
+		return new DLiteral( type );
 	}
 
 	@Override
-	public List< DNode > visit( VariableDeclarationStatement n ) {
+	public DNode visit( VariableDeclarationStatement n ) {
 		List< DNode > nodes = visitAndCollect( n.variables() );
-		nodes.addAll( n.continuation().accept( this ) );
-		return nodes;
+		DNode root = nodes.stream().reduce( DRoot.emptyRoot(), DNode::merge );
+		return root.merge( n.continuation().accept( this ) );
+
 	}
 
 	@Override
-	public List< DNode > visit( BlankExpression n ) {
-		return Collections.emptyList();
+	public DNode visit( BlankExpression n ) {
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( LiteralExpression.BooleanLiteralExpression n ) {
-		DType type = context.getTypeFromName( "bool", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return Collections.singletonList( new DLiteral( type ) );
+	public DNode visit( LiteralExpression.BooleanLiteralExpression n ) {
+		DType type = context.getTypeFromName( "boolean", context.rootFrame().roleFromName(n.world().name().identifier() ) );
+		return new DLiteral( type );
 	}
 
 	@Override
-	public List< DNode > visit( LiteralExpression.DoubleLiteralExpression n ) {
+	public DNode visit( LiteralExpression.DoubleLiteralExpression n ) {
 		DType type = context.getTypeFromName( "double", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return Collections.singletonList( new DLiteral( type ) );
+		return new DLiteral( type );
 	}
 
 	@Override
-	public List< DNode > visit( LiteralExpression.IntegerLiteralExpression n ) {
+	public DNode visit( LiteralExpression.IntegerLiteralExpression n ) {
 		DType type = context.getTypeFromName( "int", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return Collections.singletonList( new DLiteral( type ) );
+		return new DLiteral( type );
 	}
 
 	@Override
-	public List< DNode > visit( LiteralExpression.StringLiteralExpression n ) {
+	public DNode visit( LiteralExpression.StringLiteralExpression n ) {
 		DType type = context.getTypeFromName( "String", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return Collections.singletonList( new DLiteral( type ) );
+		return new DLiteral( type );
 	}
 
 	@Override
-	public List< DNode > visit( SwitchArgument< ? > n ) {
+	public DNode visit( SwitchArgument< ? > n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( CaseSignature n ) {
+	public DNode visit( CaseSignature n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( Field n ) {
+	public DNode visit( Field n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( FormalMethodParameter n ) {
+	public DNode visit( FormalMethodParameter n ) {
 		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
-		return Collections.emptyList();
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( ClassMethodDefinition n ) {
+	public DNode visit( ClassMethodDefinition n ) {
 		context.enterScope();
 		// The signature must be visited to add its symbols to the symbol table,
 		// the result is not needed for the graph.
 		n.signature().accept( this );
-		List< DNode > nodes = n.body().map( this::visit ).orElse( Collections.emptyList() );
+		DNode root = n.body().map( this::visit ).orElse( DRoot.emptyRoot() );
 		context.exitScope();
-		return nodes;
+		return root;
 	}
 
 	@Override
-	public List< DNode > visit( InterfaceMethodDefinition n ) {
+	public DNode visit( InterfaceMethodDefinition n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( MethodSignature n ) {
+	public DNode visit( MethodSignature n ) {
 		n.parameters().forEach( p -> p.accept( this ) );
-		return Collections.emptyList();
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( ConstructorDefinition n ) {
+	public DNode visit( ConstructorDefinition n ) {
 		context.enterScope();
 		// The signature must be visited to add its symbols to the symbol table,
 		// the result is not needed for the graph.
 		n.signature().accept( this );
-		List< DNode > nodes = n.body().accept( this );
+		DNode root = n.body().accept( this );
 		context.exitScope();
-		return nodes;
+		return root;
 	}
 
 	@Override
-	public List< DNode > visit( ConstructorSignature n ) {
+	public DNode visit( ConstructorSignature n ) {
 		n.parameters().forEach( p -> p.accept( this ) );
-		return Collections.emptyList();
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( VariableDeclaration n ) {
+	public DNode visit( VariableDeclaration n ) {
 		// Not needed for the final graph,
 		// but used for resolving identifiers.
 		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
-		return Collections.emptyList();
+		return DRoot.emptyRoot();
 	}
 
 	@Override
-	public List< DNode > visit( TypeExpression n ) {
+	public DNode visit( TypeExpression n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( WorldArgument n ) {
+	public DNode visit( WorldArgument n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( FormalTypeParameter n ) {
+	public DNode visit( FormalTypeParameter n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( FormalWorldParameter n ) {
+	public DNode visit( FormalWorldParameter n ) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public List< DNode > visit( Annotation n ) {
+	public DNode visit( Annotation n ) {
 		throw new UnsupportedOperationException();
 	}
 
@@ -719,11 +712,6 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	// - - - - - - - - - UTILITY - - - - - - - - - - -
 
 	private < R extends Node > List< DNode > visitAndCollect( List< R > n ) {
-		return n.stream().map( e -> e.accept( this ) )
-				.flatMap( Collection::stream ).collect( Collectors.toList() );
-	}
-
-	private < R extends Node > List< DNode > safeVisit( R n ) {
-		return n == null ? Collections.emptyList() : n.accept( this );
+		return n.stream().map( e -> e.accept( this ) ).collect( Collectors.toList() );
 	}
 }

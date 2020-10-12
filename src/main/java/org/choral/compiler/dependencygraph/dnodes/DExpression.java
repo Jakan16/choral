@@ -27,6 +27,6 @@ public class DExpression extends DNode{
 
 	@Override
 	public String toString() {
-		return getName() + " " + getResultingType();
+		return getName() + " " + getType();
 	}
 }

@@ -3,6 +3,7 @@ package org.choral.compiler.dependencygraph.dnodes;
 import org.choral.ast.Node;
 import org.choral.ast.visitors.PrettyPrinterVisitor;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -36,6 +37,9 @@ public abstract class DNode {
 		this.source = source;
 	}
 
+	public DRoot merge( DNode other ){
+		return new DRoot( Collections.singletonList( this ) ).merge( other );
+	}
 
 	/**
 	 * The type to the extent it is known from the source code

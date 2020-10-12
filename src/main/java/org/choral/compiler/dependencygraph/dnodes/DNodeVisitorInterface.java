@@ -22,4 +22,5 @@ public interface DNodeVisitorInterface < R > {
 
 	R visit( DBinaryExpression n );
 
+	R visit( DRoot n );
 }

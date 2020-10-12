@@ -87,6 +87,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		return null;
 	}
 
+	@Override
+	public Void visit( DRoot n ) {
+		visitAll( n.getDependencies() );
+		return null;
+	}
+
 	public void visitAll( List< DNode > nodes ){
 		nodes.forEach( n -> n.accept( this ) );
 	}
