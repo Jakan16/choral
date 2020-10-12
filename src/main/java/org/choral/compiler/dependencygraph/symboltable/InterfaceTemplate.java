@@ -6,6 +6,8 @@ import org.choral.ast.body.MethodDefinition;
 import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
+import org.choral.compiler.dependencygraph.role.FixedRole;
+import org.choral.compiler.dependencygraph.role.Role;
 
 import java.util.List;
 
@@ -14,15 +16,18 @@ import java.util.List;
  */
 public class InterfaceTemplate extends Template {
 	private final Interface interfaceNode;
+	private final List< Role > roles;
 
 	InterfaceTemplate( Interface interfaceNode, List< ImportDeclaration > importDeclarations, Package holdingPackage ) {
 		super( importDeclarations, holdingPackage, interfaceNode.typeParameters() );
 		this.interfaceNode = interfaceNode;
+		this.roles = Mapper.map( interfaceNode.worldParameters(),
+				w -> new FixedRole( w.toWorldArgument().name().identifier() ) );
 	}
 
 	@Override
 	public List< DType > prepareSuperType() {
-		return typeExpressionsToNodes( interfaceNode.extendsInterfaces() );
+		return typeExpressionsToDTypes( interfaceNode.extendsInterfaces() );
 	}
 
 	@Override
@@ -41,8 +46,8 @@ public class InterfaceTemplate extends Template {
 	}
 
 	@Override
-	public List< String > worldParameters() {
-		return Mapper.map( interfaceNode.worldParameters(), w -> w.toWorldArgument().name().identifier() );
+	public List< Role > worldParameters() {
+		return roles;
 	}
 
 	@Override

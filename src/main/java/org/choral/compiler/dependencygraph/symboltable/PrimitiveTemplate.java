@@ -3,6 +3,7 @@ package org.choral.compiler.dependencygraph.symboltable;
 import org.choral.ast.body.Field;
 import org.choral.ast.body.MethodDefinition;
 import org.choral.compiler.dependencygraph.dnodes.DType;
+import org.choral.compiler.dependencygraph.role.Role;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +34,7 @@ public class PrimitiveTemplate extends Template {
 	}
 
 	@Override
-	public List< String > worldParameters() {
+	public List< Role > worldParameters() {
 		return boxedType.worldParameters();
 	}
 

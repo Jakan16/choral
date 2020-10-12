@@ -1,0 +1,40 @@
+package org.choral.compiler.dependencygraph.role;
+
+public class TemporaryRole extends Role {
+
+	private Role parent;
+
+	public void coalesce( Role coalesceTo ){
+		assert parent == null;
+		parent = coalesceTo;
+	}
+
+	@Override
+	public Role getCanonicalRole() {
+		if( parent == null ){
+			return this;
+		}
+		Role fixedRole = parent.getCanonicalRole();
+		// Shortcut to the root, for future calls
+		parent = fixedRole;
+		return fixedRole;
+	}
+
+	@Override
+	public String getName() {
+		Role canonical = getCanonicalRole();
+		if( canonical == this ){
+			throw new IllegalStateException( "Temporary not coalesced to fixed role has no name" );
+		}
+		return canonical.getName();
+	}
+
+	@Override
+	public String toString() {
+		Role canonical = getCanonicalRole();
+		if( canonical == this ){
+			return String.valueOf( getNumber() );
+		}
+		return canonical.toString();
+	}
+}

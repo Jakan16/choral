@@ -2,6 +2,8 @@ package org.choral.compiler.dependencygraph.symboltable;
 
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
+import org.choral.compiler.dependencygraph.role.FixedRole;
+import org.choral.compiler.dependencygraph.role.Role;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,11 +25,11 @@ public class UnknownTemplate extends Template {
 		return Collections.emptyList();
 	}
 
-	private final List< String > worldParams;
+	private final List< Role > worldParams;
 
 	UnknownTemplate() {
 		super( null, null, Collections.emptyList() );
-		worldParams = Collections.singletonList( "A" );
+		worldParams = Collections.singletonList( new FixedRole( "A" ) );
 	}
 
 	@Override
@@ -51,7 +53,7 @@ public class UnknownTemplate extends Template {
 	}
 
 	@Override
-	public List< String > worldParameters() {
+	public List< Role > worldParameters() {
 		return worldParams;
 	}
 

@@ -2,6 +2,7 @@ package org.choral.compiler.dependencygraph.dnodes;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Node for literal values
@@ -28,7 +29,10 @@ public class DLiteral extends DNode{
 	@Override
 	public String toString() {
 		if( !getType().getRoles().isEmpty() ){
-			return getName() + "@(" + String.join( ", ", getType().getRoles() ) + ")" + super.toString();
+			return getName() +
+					"@(" + getType().getRoles().stream().map( Object::toString )
+					.collect( Collectors.joining(", ")) + ")" +
+					super.toString();
 		}
 		return getName() + " " + super.toString();
 	}

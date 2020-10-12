@@ -15,6 +15,7 @@ import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitorInterface;
 import org.choral.compiler.dependencygraph.dnodes.*;
+import org.choral.compiler.dependencygraph.role.Role;
 import org.choral.compiler.dependencygraph.symboltable.*;
 
 import java.util.*;
@@ -49,7 +50,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			roots.addAll( new DependencyGraph( cus, headerUnits ).visit( cu ) );
 		}
 
-		GraphSolver.solve( roots );
+		//GraphSolver.solve( roots );
 
 		for( DNode dNode: roots ){
 			print(dNode, 0);
@@ -265,7 +266,6 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 		DMethodCall node = new DMethodCall( sig.getName(), arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
-		node.setRole( mrt.getRoles() );
 		return Collections.singletonList( node );
 	}
 
@@ -285,7 +285,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		// get the used constructor for the instantiation
 		// to get the destination roles of the arguments.
 		Template.MethodSig sig = type.getTem().getConstructorSig( n.arguments().size() );
-		Map< String, String > roleMap = Mapper.mapping(
+		var roleMap = Mapper.mapping(
 				type.getTem().worldParameters(), type.getRoles() );
 		List< DType > parameters = Mapper.map( sig.getParameters(),
 				p -> new DType( p.getTem(),
@@ -319,7 +319,7 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 	@Override
 	public List< DNode > visit( NullExpression n ) {
 		Template nullTemplate = context.currentFrame().resolveIdentifier( "null" );
-		DType type = new DType( nullTemplate, mapWorldToString( n.worlds() ), Collections.emptyList() );
+		DType type = new DType( nullTemplate, context.mapWorldToString( n.worlds() ), Collections.emptyList() );
 		return Collections.singletonList( new DLiteral( type ) );
 	}
 
@@ -337,25 +337,25 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 
 	@Override
 	public List< DNode > visit( LiteralExpression.BooleanLiteralExpression n ) {
-		DType type = context.getTypeFromName( "bool", n.world().name().identifier() );
+		DType type = context.getTypeFromName( "bool", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.DoubleLiteralExpression n ) {
-		DType type = context.getTypeFromName( "double", n.world().name().identifier() );
+		DType type = context.getTypeFromName( "double", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.IntegerLiteralExpression n ) {
-		DType type = context.getTypeFromName( "int", n.world().name().identifier() );
+		DType type = context.getTypeFromName( "int", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		return Collections.singletonList( new DLiteral( type ) );
 	}
 
 	@Override
 	public List< DNode > visit( LiteralExpression.StringLiteralExpression n ) {
-		DType type = context.getTypeFromName( "String", n.world().name().identifier() );
+		DType type = context.getTypeFromName( "String", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		return Collections.singletonList( new DLiteral( type ) );
 	}
 
@@ -452,17 +452,13 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		throw new UnsupportedOperationException();
 	}
 
-	private static List< String > mapWorldToString( List< WorldArgument > worldArguments ){
-		return Mapper.map( worldArguments, w -> w.name().identifier() );
-	}
-
 	/**
 	 * Represent the context of a class, and it's generics and currently processed method.
 	 * Also does mapping of roles from a foreign class into the world of its container.
 	 */
 	private static class ContextFrame {
 		private final Template tem;
-		private final Map< String, String > roleMap;
+		private final Map< Role, Role > roleMap;
 		private final Map< String, DType > genericMap;
 		private Template.MethodSig methodSig;
 		private Map< String, DType > funcGenericMap = Collections.emptyMap();
@@ -556,6 +552,21 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 		 */
 		public DType getReturnType(){
 			return methodSig.getReturnType();
+		}
+
+		/**
+		 * Get {@link Role} instance from identifier
+		 * @param identifier The identifier of the role
+		 * @return An instance of {@link Role} with the same identifier
+		 */
+		public Role roleFromName( String identifier ){
+			for( Role role: roleMap.keySet() ){
+				if( role.getName().equals( identifier ) ){
+					return role;
+				}
+			}
+
+			throw new IllegalStateException( "No role with such name" );
 		}
 	}
 
@@ -672,16 +683,20 @@ public class DependencyGraph implements ChoralVisitorInterface<List< DNode >> {
 			}
 		}
 
-		public DType getTypeFromName( String primitiveName, String role ){
+		public DType getTypeFromName( String primitiveName, Role role ){
 			return new DType( currentFrame().resolveIdentifier( primitiveName ),
 					Collections.singletonList( role ),
 					Collections.emptyList() );
 		}
 
+		private List< Role > mapWorldToString( List< WorldArgument > worldArguments ){
+			return Mapper.map( worldArguments, w -> rootFrame().roleFromName( w.name().identifier() ) );
+		}
+
 		/**
 		 * Maps a {@link TypeExpression} to {@link DType}
 		 * @param n the type to map
-		 * @return an mapped type
+		 * @return the mapped type
 		 */
 		public DType getTypeOfExpression( TypeExpression n ){
 			List< DType > typeArgs = new ArrayList<>();

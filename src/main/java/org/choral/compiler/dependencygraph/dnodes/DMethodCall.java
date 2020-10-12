@@ -1,5 +1,7 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
+import org.choral.compiler.dependencygraph.role.Role;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -8,7 +10,6 @@ import java.util.stream.Collectors;
  */
 public class DMethodCall extends DNode {
 
-	private List<String> roles;
 	private final DType returnType;
 	private final List< DType > parameters;
 
@@ -23,12 +24,8 @@ public class DMethodCall extends DNode {
 		this.parameters = parameters;
 	}
 
-	public List<String> getRoles() {
-		return roles;
-	}
-
-	public void setRole( List<String> roles) {
-		this.roles = roles;
+	public List< Role > getRoles() {
+		return returnType.getRoles();
 	}
 
 	@Override
@@ -42,7 +39,11 @@ public class DMethodCall extends DNode {
 		sb.append( getName() );
 
 		if( getRoles() != null ){
-			sb.append( "@(" ).append( String.join( ", ", getRoles() ) ).append( ") " );
+			sb
+			.append( "@(" )
+			.append( getRoles().stream().map( Object::toString )
+					.collect( Collectors.joining(", ")) )
+			.append( ") " );
 		}
 		sb.append( "r:" ).append( returnType.toString() ).append( " p:(" )
 		.append( parameters.stream().map( DType::toString )

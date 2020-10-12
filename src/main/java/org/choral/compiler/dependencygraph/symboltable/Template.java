@@ -8,6 +8,7 @@ import org.choral.ast.type.TypeExpression;
 import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
+import org.choral.compiler.dependencygraph.role.Role;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,12 +21,13 @@ public abstract class Template {
 	private final Package holdingPackage;
 	private Map<String, Template > knownSymbols;
 	private final Map<String, GenericTemplate > genericTemplates;
-	private final List< Map< String, String > > roleMaps = new ArrayList<>();
+	private final List< Map< Role, Role > > superRoleMaps = new ArrayList<>();
 	private final List< Map< String, DType > > genericMaps = new ArrayList<>();
 	private List< MethodSig > methodSigs;
 	private List< MethodSig > constructorSigs;
 	private List< DVariable > fields;
 	private List< DType > superTypes;
+	private Map< String, Role > roleIdentifierMap;
 
 	Template(
 			List< ImportDeclaration > importDeclarations,
@@ -53,6 +55,7 @@ public abstract class Template {
 	void prepare(){
 		// Symbols cannot be prepared eagerly, as they may reference Templates yet to be loaded
 		if( knownSymbols == null ){
+			roleIdentifierMap = Mapper.mapping( worldParameters(), Role::getName, Mapper.id() );
 			populateKnownSymbols();
 			superTypes = prepareSuperType();
 			createMappings();
@@ -63,7 +66,7 @@ public abstract class Template {
 		// creates mappings for each super class.
 		for( DType sType: this.superTypes ){
 			Template sTem = sType.getTem();
-			this.roleMaps.add( Mapper.mapping( sTem.worldParameters(), sType.getRoles() ) );
+			this.superRoleMaps.add( Mapper.mapping( sTem.worldParameters(), sType.getRoles() ) );
 			this.genericMaps.add(
 					Mapper.mapping( sTem.typeParameters(),
 					sType.getTypeArguments() ) );
@@ -74,7 +77,7 @@ public abstract class Template {
 		// Collect fields of the type represented by this Template
 		List< DVariable > fields = Mapper.map( fields(), f ->
 				new DVariable( f.name().identifier(),
-						typeExpressionToNode( f.typeExpression() ) ) );
+						typeExpressionToDType( f.typeExpression() ) ) );
 
 		// Add fields from super types, mapping roles
 		for( int i = 0; i < this.superTypes.size(); i++ ) {
@@ -107,6 +110,7 @@ public abstract class Template {
 	}
 
 	private List< MethodSig > deriveConstructorSigs(){
+		prepare();
 		// Collect constructor signatures
 		List< MethodSig > constructorSigs = constructorDefinitions().stream()
 				.map( ConstructorDefinition::signature )
@@ -126,11 +130,11 @@ public abstract class Template {
 			DType replaceType = this.genericMaps.get( index ).get( type.getName() );
 			if( replaceType != null ) {
 				return new DType( replaceType.getTem(),
-						Mapper.map( type.getRoles(), this.roleMaps.get( index )::get ),
+						Mapper.map( type.getRoles(), this.superRoleMaps.get( index )::get ),
 						replaceType.getTypeArguments() );
 			}
 		}
-		return type.copyWithMapping( this.roleMaps.get( index ) );
+		return type.copyWithMapping( this.superRoleMaps.get( index ) );
 	}
 
 	void populateKnownSymbols(){
@@ -188,20 +192,32 @@ public abstract class Template {
 		return getPrimitive( identifier );
 	}
 
-	protected DType typeExpressionToNode( TypeExpression typeExpression ){
+	public Map< String, Role > getRoleIdentifierMap() {
+		return roleIdentifierMap;
+	}
+
+	protected DType typeExpressionToDType( TypeExpression typeExpression ){
+		return typeExpressionToDType( typeExpression, getRoleIdentifierMap() );
+	}
+
+	protected DType typeExpressionToDType( TypeExpression typeExpression, Map< String, Role > roleIdentifierMap ){
 		List< DType > typeArgs = new ArrayList<>();
 		for( TypeExpression t: typeExpression.typeArguments() ){
-			typeArgs.add( typeExpressionToNode(t) );
+			typeArgs.add( typeExpressionToDType(t) );
 		}
 
 		return new DType(
 				resolveIdentifier( typeExpression.name().identifier() ),
-				Mapper.map( typeExpression.worldArguments(), w -> w.name().identifier() ),
+				Mapper.map( typeExpression.worldArguments(), w -> roleIdentifierMap.get( w.name().identifier() ) ),
 				typeArgs );
 	}
 
-	protected List< DType > typeExpressionsToNodes( List< TypeExpression > typeExpressions ){
-		return Mapper.map( typeExpressions, this::typeExpressionToNode );
+	protected DType typeExpressionToDTypeWithParentRoles( TypeExpression typeExpression ){
+		return typeExpressionToDType( typeExpression );
+	}
+
+	protected List< DType > typeExpressionsToDTypes( List< TypeExpression > typeExpressions ){
+		return Mapper.map( typeExpressions, this::typeExpressionToDType );
 	}
 
 	/**
@@ -209,6 +225,7 @@ public abstract class Template {
 	 * @return A list of Fields
 	 */
 	public List< DVariable > getFields(){
+		prepare();
 		if( this.fields == null ){
 			this.fields = deriveFields();
 		}
@@ -281,6 +298,7 @@ public abstract class Template {
 	 * @return A list of constructor signatures
 	 */
 	public List< MethodSig > getConstructorSigs() {
+		prepare();
 		if( this.constructorSigs == null ){
 			this.constructorSigs = deriveConstructorSigs();
 		}
@@ -318,7 +336,7 @@ public abstract class Template {
 	 * The role parameters of this template
 	 * @return A list of role parameters
 	 */
-	public abstract List< String > worldParameters();
+	public abstract List< Role > worldParameters();
 
 	/**
 	 * Names of all type parameters of this type
@@ -406,13 +424,11 @@ public abstract class Template {
 			this.name = name;
 			this.parameters = parameters.stream().map( FormalMethodParameter::type )
 					.map( t -> funcGenericsMap.getOrDefault( t.name().identifier(), parentTemplate )
-							.typeExpressionToNode( t )
+							.typeExpressionToDTypeWithParentRoles( t )
 					).collect( Collectors.toList() );
 
 			if( returnType != null ) {
-				this.returnType = funcGenericsMap.getOrDefault(
-						returnType.name().identifier(), parentTemplate
-				).typeExpressionToNode( returnType );
+				this.returnType = funcGenericsMap.getOrDefault(	returnType.name().identifier(), parentTemplate ).typeExpressionToDTypeWithParentRoles( returnType );
 			}else {
 				this.returnType = null;
 			}
