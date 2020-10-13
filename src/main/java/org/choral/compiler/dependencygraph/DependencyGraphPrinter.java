@@ -41,6 +41,17 @@ public class DependencyGraphPrinter implements DNodeVisitorInterface< StringBuil
 	}
 
 	@Override
+	public StringBuilder visit( DAssign n ) {
+		sb.append( "    ".repeat( indent ) ).append( n.toString() ).append( '\n' );
+
+		indent++;
+		visit( n.getTarget() );
+		visit( n.getValue() );
+		indent--;
+		return sb;
+	}
+
+	@Override
 	public StringBuilder visit( DLiteral n ) {
 		return sb.append( "    ".repeat( indent ) ).append( n.toString() ).append( '\n' );
 	}
@@ -86,8 +97,8 @@ public class DependencyGraphPrinter implements DNodeVisitorInterface< StringBuil
 
 		sb.append( n.toString() ).append( '\n' );
 		indent++;
-		visit( n.getLeft() ).append( '\n' );
-		visit( n.getRight() ).append( '\n' );
+		visit( n.getLeft() );
+		visit( n.getRight() );
 		indent--;
 		return sb;
 	}

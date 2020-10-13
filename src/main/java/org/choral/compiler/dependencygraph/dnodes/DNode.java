@@ -12,7 +12,6 @@ public abstract class DNode {
 
 	private Node source;
 	private final String name;
-	private DType resultingType;
 
 	public DNode( String name ) {
 		this.name = name;
@@ -39,22 +38,6 @@ public abstract class DNode {
 	 * @return the known non-inferred type
 	 */
 	public abstract DType getType();
-
-	/**
-	 * The resulting type of the completed expression
-	 * @return The resulting type
-	 */
-	public DType getResultingType() {
-		return resultingType;
-	}
-
-	/**
-	 * Set the resulting type of the completed expression
-	 * @param resultingType The resulting type
-	 */
-	public void setResultingType( DType resultingType ) {
-		this.resultingType = resultingType;
-	}
 
 	public abstract < R > R accept( DNodeVisitorInterface< R > v );
 

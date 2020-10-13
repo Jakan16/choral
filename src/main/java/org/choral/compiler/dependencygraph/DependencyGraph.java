@@ -16,6 +16,7 @@ import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitorInterface;
 import org.choral.compiler.dependencygraph.dnodes.*;
 import org.choral.compiler.dependencygraph.role.Role;
+import org.choral.compiler.dependencygraph.role.TemporaryRole;
 import org.choral.compiler.dependencygraph.symboltable.*;
 
 import java.util.*;
@@ -45,12 +46,13 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 			Collection< CompilationUnit > headerUnits
 	){
 		DRoot root = DRoot.emptyRoot();
+		DependencyGraph visitor = new DependencyGraph( cus, headerUnits );
 		// walk all source nodes
 		for( CompilationUnit cu: cus ) {
-			root = root.merge( new DependencyGraph( cus, headerUnits ).visit( cu ) );
+			root = root.merge( visitor.visit( cu ) );
 		}
 
-		//GraphSolver.solve( roots );
+		GraphSolver.solve( root );
 
 		System.out.println( DependencyGraphPrinter.walk( root ) );
 	}
@@ -184,17 +186,41 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( AssignExpression n ) {
-		List< DNode > dependencies = new ArrayList<>();
-		dependencies.add( n.value().accept( this ) );
-		dependencies.add( n.target().accept( this ) );
-		return new DExpression( dependencies, "AssignExpression" );
+		var target = n.target().accept( this );
+		var value = n.value().accept( this );
+		return new DAssign( target, value );
 	}
 
 	@Override
 	public DNode visit( BinaryExpression n ) {
 		var left =  n.left().accept( this );
 		var right =  n.right().accept( this );
-		return new DBinaryExpression( left, right, n.operator() );
+		DType resultType = getTypeOfOperation( left.getType(), right.getType(), n.operator() );
+		return new DBinaryExpression( left, right, n.operator(), resultType );
+	}
+
+	private DType getTypeOfOperation( DType left, DType right, BinaryExpression.Operator operator ) {
+		return switch( operator ){
+			case SHORT_CIRCUITED_OR,
+				SHORT_CIRCUITED_AND,
+				EQUALS,
+				NOT_EQUALS,
+				LESS,
+				GREATER,
+				LESS_EQUALS,
+				GREATER_EQUALS ->
+					context.getTypeFromName( "boolean", new TemporaryRole() );
+			case OR,
+				AND -> context.getTypeFromName( "int", new TemporaryRole() );
+			case PLUS,
+				MINUS,
+				MULTIPLY,
+				DIVIDE,
+				REMAINDER ->
+					context.getTypeFromName( left.getTem().getName().equals( "double" ) ||
+							right.getTem().getName().equals( "double" ) ? "double" : "int",
+							new TemporaryRole() );
+		};
 	}
 
 	@Override

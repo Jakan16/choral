@@ -30,6 +30,14 @@ public class TemporaryRole extends Role {
 	}
 
 	@Override
+	public boolean isFixed() {
+		if( parent == null ){
+			return false;
+		}
+		return getCanonicalRole().isFixed();
+	}
+
+	@Override
 	public String toString() {
 		Role canonical = getCanonicalRole();
 		if( canonical == this ){

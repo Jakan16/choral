@@ -34,4 +34,10 @@ public abstract class Role {
 	public abstract Role getCanonicalRole();
 
 	public abstract String getName();
+
+	/**
+	 * Weather the role have been fixed to an actual role, or is still to be fixed.
+	 * @return true if an actual role is assigned to this instance.
+	 */
+	public abstract boolean isFixed();
 }

@@ -1,154 +1,93 @@
 package org.choral.compiler.dependencygraph;
 
 import org.choral.compiler.dependencygraph.dnodes.*;
+import org.choral.compiler.dependencygraph.role.Role;
+import org.choral.compiler.dependencygraph.role.TemporaryRole;
 
-import java.util.Collections;
 import java.util.List;
 
 public class GraphSolver implements DNodeVisitorInterface< Void > {
 
-	public static List< DNode > solve( List< DNode > roots ){
-
+	public static DRoot solve( DRoot root ){
 		var gs = new GraphSolver();
-		roots.forEach( gs::visit );
-
-		return roots;
+		gs.visit( root );
+		return root;
 	}
 
 	@Override
-	public Void visit( DNode n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DClassInstantiation n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DExpression n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DLiteral n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DMethodCall n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DReturn n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DStaticAccess n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DThis n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DVariable n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DBinaryExpression n ) {
-		return null;
-	}
-
-	@Override
-	public Void visit( DRoot n ) {
-		return null;
-	}
-
-	/*@Override
 	public Void visit( DNode n ) {
 		return n.accept( this );
 	}
 
 	@Override
 	public Void visit( DClassInstantiation n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
+		visitAll( n.getArguments() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DExpression n ) {
 		visitAll( n.getDependencies() );
-		n.setResultingType( n.getDependencies().get( n.getDependencies().size() - 1 ).getResultingType() );
+		return null;
+	}
+
+	@Override
+	public Void visit( DAssign n ) {
+		visit( n.getTarget() );
+		visit( n.getValue() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DLiteral n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DMethodCall n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
+		visitAll( n.getArguments() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DReturn n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
+		visit( n.getReturnNode() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DStaticAccess n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DThis n ) {
-		throw new IllegalStateException();
+		return null;
 	}
 
 	@Override
 	public Void visit( DVariable n ) {
-		visitAll( n.getDependencies() );
-		n.setResultingType( n.getType() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DBinaryExpression n ) {
-		visitAll( n.getDependencies() );
-
-		DType type1 = n.getDependencies().get( 0 ).getResultingType();
-		DType type2 = n.getDependencies().get( 1 ).getResultingType();
-
-		DType resultingType = new DType( type1.getTem(), type1.getRoles(), Collections.emptyList() );
-		n.setResultingType( resultingType );
-
+		visit( n.getLeft() );
+		visit( n.getRight() );
+		Role role = n.getType().getRoles().get( 0 );
+		if( !role.isFixed() ){
+			(( TemporaryRole ) role).coalesce( n.getRight().getType().getRoles().get( 0 ) );
+		}
 		return null;
 	}
 
 	@Override
 	public Void visit( DRoot n ) {
-		visitAll( n.getDependencies() );
+		visitAll( n.getNodes() );
 		return null;
 	}
 
 	public void visitAll( List< DNode > nodes ){
-		nodes.forEach( n -> n.accept( this ) );
-	}*/
+		nodes.forEach( this::visit );
+	}
 }

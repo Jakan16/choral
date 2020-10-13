@@ -8,6 +8,8 @@ public interface DNodeVisitorInterface < R > {
 
 	R visit( DExpression n );
 
+	R visit( DAssign n );
+
 	R visit( DLiteral n );
 
 	R visit( DMethodCall n );

@@ -19,6 +19,11 @@ public class FixedRole extends Role {
 	}
 
 	@Override
+	public boolean isFixed() {
+		return true;
+	}
+
+	@Override
 	public Role getCanonicalRole() {
 		return this;
 	}
