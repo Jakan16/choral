@@ -22,6 +22,7 @@
 package choral.ast;
 
 import choral.ast.visitors.ChoralVisitorInterface;
+import choral.compiler.dependencygraph.dnodes.DNode;
 
 public abstract class Node {
 
@@ -48,6 +49,17 @@ public abstract class Node {
 	public < R extends Node > R copyPosition( Node n ) {
 		this.position = n.position;
 		return (R) this;
+	}
+
+	private DNode dependencies;
+
+	public DNode getDependencies() {
+		return dependencies;
+	}
+
+	public void setDependencies( DNode dependencies ) {
+		assert dependencies != null;
+		this.dependencies = dependencies;
 	}
 
 	public abstract < R > R accept( ChoralVisitorInterface< R > v );

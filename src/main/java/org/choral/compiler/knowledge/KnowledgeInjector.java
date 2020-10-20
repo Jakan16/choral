@@ -2,11 +2,12 @@ package org.choral.compiler.knowledge;
 
 import org.choral.ast.*;
 import org.choral.ast.expression.*;
-import org.choral.ast.statement.*;
+import org.choral.ast.statement.ExpressionStatement;
+import org.choral.ast.statement.IfStatement;
+import org.choral.ast.statement.Statement;
 import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
-import org.choral.ast.visitors.PrettyPrinterVisitor;
 import org.choral.compiler.Typer;
 import org.choral.compiler.merge.MergeException;
 import org.choral.compiler.merge.StatementsMerger;

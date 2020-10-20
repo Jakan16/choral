@@ -1,9 +1,7 @@
 package org.choral.compiler.dependencygraph;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -130,6 +128,31 @@ public class Mapper {
 	 */
 	public static < T, R > List< R > map( List< T > list, Function< T, R > mapFunction ){
 		return list.stream().map( mapFunction ).collect( Collectors.toList());
+	}
+
+	/**
+	 * Creates a list from two {@link Iterable} inputs by repeatedly applying mapFunc on each index on the iterables.
+	 * @param from1 The first source
+	 * @param from2 The second source
+	 * @param mapFunc The mapping function to transform a pair of elements from each source to a single result
+	 * @param <T1> The type of the first source
+	 * @param <T2> The type of the second source
+	 * @param <R> The type of the resulting list
+	 * @return A new list generated from the two sources
+	 */
+	public static < T1, T2, R > List< R > map(
+			Iterable< T1 > from1,
+			Iterable< T2 > from2,
+			BiFunction< T1, T2, R > mapFunc
+	){
+		Iterator< T1 > it = from1.iterator();
+		List< R > result = new ArrayList<>();
+		from2.forEach( t2 -> {
+			assert it.hasNext();
+			result.add( mapFunc.apply( it.next(), t2 ) );
+		} );
+
+		return result;
 	}
 
 	/**

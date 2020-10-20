@@ -1,9 +1,12 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
+import org.choral.ast.Name;
+import org.choral.ast.type.TypeExpression;
 import org.choral.compiler.dependencygraph.Mapper;
 import org.choral.compiler.dependencygraph.role.Role;
 import org.choral.compiler.dependencygraph.symboltable.Template;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,5 +59,14 @@ public class DType {
 				"@(" +
 				roles.stream().map( Object::toString ).collect( Collectors.joining(", ")) +
 				")";
+	}
+
+	/**
+	 * Creates an AST representation for this type, without roles.
+	 * @return The {@link TypeExpression} without roles, for this type
+	 */
+	public TypeExpression toTypeExpression(){
+		return new TypeExpression( new Name( getName() ), Collections.emptyList(),
+				Mapper.map( getTypeArguments(),	DType::toTypeExpression ) );
 	}
 }

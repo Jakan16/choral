@@ -17,7 +17,9 @@ import org.choral.ast.visitors.ChoralVisitorInterface;
 import org.choral.compiler.dependencygraph.dnodes.*;
 import org.choral.compiler.dependencygraph.role.Role;
 import org.choral.compiler.dependencygraph.role.TemporaryRole;
-import org.choral.compiler.dependencygraph.symboltable.*;
+import org.choral.compiler.dependencygraph.symboltable.PackageHandler;
+import org.choral.compiler.dependencygraph.symboltable.SymbolTable;
+import org.choral.compiler.dependencygraph.symboltable.Template;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,8 +42,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	 * Creates a dependency graph for a set of {@link CompilationUnit}'s
 	 * @param cus The units of the source code
 	 * @param headerUnits The units from header files
+	 * @return The AST with missing coms and roles inserted
 	 */
-	public static void walk(
+	public static Collection< CompilationUnit > walk(
 			Collection< CompilationUnit > cus,
 			Collection< CompilationUnit > headerUnits
 	){
@@ -54,7 +57,15 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		GraphSolver.solve( root );
 
-		System.out.println( DependencyGraphPrinter.walk( root ) );
+		return ComInjector.inject( cus );
+		//System.out.println( DependencyGraphPrinter.walk( root ) );
+
+		/*var injected = ComInjector.inject( cus );
+		for( var cu: injected ){
+			System.out.println(new PrettyPrinterVisitor().visit( cu ) );
+		}
+
+		return injected;*/
 	}
 
 	@Override
@@ -128,12 +139,14 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		context.pushContextOf( scope ); // pushes context of the scope
 		DNode scopedExp = n.scopedExpression().accept( this );
 		context.popFrame();
+		var node = new DExpression( Arrays.asList( scope, scopedExp ), "ScopedExpression" );
+		n.setDependencies( node );
 		if( scope instanceof DThis ){
 			// This and Super has no role information,
 			// and the graph can be simplified by omitting these.
 			return scopedExp;
 		}
-		return new DExpression( Arrays.asList( scope, scopedExp ), "ScopedExpression" );
+		return node;
 	}
 
 	@Override
@@ -175,6 +188,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		DNode returnExp = n.returnExpression().accept( this );
 		// create explicit return node, as the return may be required to be at specific roles
 		DNode returnNode = new DReturn( returnExp, context.currentFrame().getReturnType() );
+		n.setDependencies( returnNode );
 		DNode continuation = n.continuation().accept( this );
 		return returnNode.merge( continuation );
 	}
@@ -188,7 +202,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( AssignExpression n ) {
 		var target = n.target().accept( this );
 		var value = n.value().accept( this );
-		return new DAssign( target, value );
+		var node = new DAssign( target, value );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -196,7 +212,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		var left =  n.left().accept( this );
 		var right =  n.right().accept( this );
 		DType resultType = getTypeOfOperation( left.getType(), right.getType(), n.operator() );
-		return new DBinaryExpression( left, right, n.operator(), resultType );
+		var node = new DBinaryExpression( left, right, n.operator(), resultType );
+		n.setDependencies( node );
+		return node;
 	}
 
 	private DType getTypeOfOperation( DType left, DType right, BinaryExpression.Operator operator ) {
@@ -230,17 +248,23 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( EnclosedExpression n ) {
-		return new DExpression( Collections.singletonList( n.nestedExpression().accept( this ) ), "EnclosedExpression" );
+		var node = new DExpression( Collections.singletonList( n.nestedExpression().accept( this ) ), "EnclosedExpression" );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
 	public DNode visit( FieldAccessExpression n ) {
-		return context.resolveIdentifier( n.name().identifier() );
+		var node = context.resolveIdentifier( n.name().identifier() );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
 	public DNode visit( StaticAccessExpression n ) {
-		return new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) );
+		var node = new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -268,8 +292,10 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 			this.context.popFrame();
 		}
 
-		return new DMethodCall( sig.getName(), arguments, mrt,
+		var node = new DMethodCall( sig.getName(), arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -294,7 +320,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 				p -> new DType( p.getTem(),
 						Mapper.map( p.getRoles(), roleMap::get ),
 						p.getTypeArguments() ) );
-		return new DClassInstantiation( dependencies, type.getName(), type, parameters );
+		var node = new DClassInstantiation( dependencies, type.getName(), type, parameters );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -304,7 +332,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( NotExpression n ) {
-		return new DExpression( Collections.singletonList( n.expression().accept( this ) ), "NotExpression" );
+		var node = new DExpression( Collections.singletonList( n.expression().accept( this ) ), "NotExpression" );
+		n.setDependencies( node );
+		return node;
 	}
 
 	private static final DThis thisNode = new DThis();
@@ -322,7 +352,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( NullExpression n ) {
 		Template nullTemplate = context.currentFrame().resolveIdentifier( "null" );
 		DType type = new DType( nullTemplate, context.mapWorldToString( n.worlds() ), Collections.emptyList() );
-		return new DLiteral( type );
+		var node = new DLiteral( type );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -330,7 +362,6 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		List< DNode > nodes = visitAndCollect( n.variables() );
 		DNode root = nodes.stream().reduce( DRoot.emptyRoot(), DNode::merge );
 		return root.merge( n.continuation().accept( this ) );
-
 	}
 
 	@Override
@@ -341,25 +372,33 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	@Override
 	public DNode visit( LiteralExpression.BooleanLiteralExpression n ) {
 		DType type = context.getTypeFromName( "boolean", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return new DLiteral( type );
+		var node = new DLiteral( type );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
 	public DNode visit( LiteralExpression.DoubleLiteralExpression n ) {
 		DType type = context.getTypeFromName( "double", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return new DLiteral( type );
+		var node = new DLiteral( type );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
 	public DNode visit( LiteralExpression.IntegerLiteralExpression n ) {
 		DType type = context.getTypeFromName( "int", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return new DLiteral( type );
+		var node = new DLiteral( type );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
 	public DNode visit( LiteralExpression.StringLiteralExpression n ) {
 		DType type = context.getTypeFromName( "String", context.rootFrame().roleFromName(n.world().name().identifier() ) );
-		return new DLiteral( type );
+		var node = new DLiteral( type );
+		n.setDependencies( node );
+		return node;
 	}
 
 	@Override
@@ -613,7 +652,11 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		}
 
 		public void pushFrame( String packagePath, Class c ){
-			this.contextFrames.addFirst( new ContextFrame( getTemplate( packagePath, c ) ) );
+			pushFrame( getTemplate( packagePath, c ) );
+		}
+
+		public void pushFrame( Template template ){
+			this.contextFrames.addFirst( new ContextFrame( template ) );
 		}
 
 		public void pushFrame( DType t ){
@@ -680,7 +723,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		public void pushContextOf( DNode node ) {
 			if( node instanceof DThis ){
-				pushRootFrame();
+				pushFrame( rootFrame().tem );
 			}else {
 				pushFrame( node.getType() );
 			}

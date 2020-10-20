@@ -36,6 +36,17 @@ public abstract class Role {
 	public abstract String getName();
 
 	/**
+	 * Returns true if the two roles share the same name.
+	 * If the roles are from the same world, they are effectively the same role.
+	 * @param role1 The first role to compare.
+	 * @param role2 Thew second role to compare.
+	 * @return True if the roles have the same display name
+	 */
+	public static boolean commonDisplayName( Role role1, Role role2 ){
+		return role1.getName().equals( role2.getName() );
+	}
+
+	/**
 	 * Weather the role have been fixed to an actual role, or is still to be fixed.
 	 * @return true if an actual role is assigned to this instance.
 	 */
