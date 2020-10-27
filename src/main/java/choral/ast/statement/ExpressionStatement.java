@@ -64,10 +64,16 @@ public class ExpressionStatement extends Statement {
 		try {
 			return m.merge( this, ( this.getClass().cast( n ) ) );
 		} catch( ClassCastException e ) {
+			if( this.position() != null ) {
+				throw new ChoralException(
+						this.position().line() + ":"
+								+ this.position().column() + ":"
+								+ "error: Could not merge \n" + new PrettyPrinterVisitor().visit(
+								this ) + "\n with " + n.getClass().getSimpleName() );
+			}
+
 			throw new ChoralException(
-					this.position().line() + ":"
-							+ this.position().column() + ":"
-							+ "error: Could not merge \n" + new PrettyPrinterVisitor().visit(
+							"error: Could not merge \n" + new PrettyPrinterVisitor().visit(
 							this ) + "\n with " + n.getClass().getSimpleName() );
 		}
 	}

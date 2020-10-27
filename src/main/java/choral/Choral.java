@@ -162,6 +162,9 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 								true, true ) // TODO: keep this or introduce parameter also in EPP?
 				)
 						.collect( Collectors.toList() );
+
+				sourceUnits = DependencyGraph.walk( sourceUnits, headerUnits );
+
 				AtomicReference< Collection< CompilationUnit > > annotatedUnits = new AtomicReference<>();
 				profilerLog( "typechecking", () -> annotatedUnits.set( Typer.annotate( sourceUnits,
 						headerUnits ) ) );

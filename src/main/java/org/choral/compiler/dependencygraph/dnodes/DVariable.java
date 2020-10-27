@@ -24,6 +24,6 @@ public class DVariable extends DNode {
 
 	@Override
 	public String toString() {
-		return "VariableNode " + getName() + " " + type.toString();
+		return "VariableNode " + getName() + " " + type.toString() + " " + super.toString();
 	}
 }

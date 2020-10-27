@@ -23,6 +23,6 @@ public class DThis extends DNode {
 
 	@Override
 	public String toString() {
-		return getName();
+		return getName() + " " + super.toString();
 	}
 }

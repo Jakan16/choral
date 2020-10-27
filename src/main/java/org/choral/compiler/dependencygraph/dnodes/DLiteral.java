@@ -29,7 +29,7 @@ public class DLiteral extends DNode{
 		if( !getType().getRoles().isEmpty() ){
 			return getName() +
 					"@(" + getType().getRoles().stream().map( Object::toString )
-					.collect( Collectors.joining(", ")) + ")" +
+					.collect( Collectors.joining(", ")) + ") " +
 					super.toString();
 		}
 		return getName() + " " + super.toString();

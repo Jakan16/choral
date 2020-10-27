@@ -49,7 +49,7 @@ public class DMethodCall extends DNode {
 				+ " p:("
 				+ parameters.stream().map( DType::toString )
 					.collect( Collectors.joining( ", " ) )
-				+ ")";
+				+ ") " + super.toString();
 	}
 
 	@Override

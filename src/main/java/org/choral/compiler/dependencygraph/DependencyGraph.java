@@ -140,6 +140,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		DNode scopedExp = n.scopedExpression().accept( this );
 		context.popFrame();
 		var node = new DExpression( Arrays.asList( scope, scopedExp ), "ScopedExpression" );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		if( scope instanceof DThis ){
 			// This and Super has no role information,
@@ -152,7 +153,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	@Override
 	public DNode visit( ExpressionStatement n ) {
 		DNode exp = n.expression().accept( this );
-		return n.continuation().accept( this ).merge( exp );
+		return exp.merge( n.continuation().accept( this ) );
 	}
 
 	@Override
@@ -188,6 +189,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		DNode returnExp = n.returnExpression().accept( this );
 		// create explicit return node, as the return may be required to be at specific roles
 		DNode returnNode = new DReturn( returnExp, context.currentFrame().getReturnType() );
+		returnNode.setPosition( n.position() );
 		n.setDependencies( returnNode );
 		DNode continuation = n.continuation().accept( this );
 		return returnNode.merge( continuation );
@@ -203,6 +205,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		var target = n.target().accept( this );
 		var value = n.value().accept( this );
 		var node = new DAssign( target, value );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -213,6 +216,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		var right =  n.right().accept( this );
 		DType resultType = getTypeOfOperation( left.getType(), right.getType(), n.operator() );
 		var node = new DBinaryExpression( left, right, n.operator(), resultType );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -249,6 +253,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	@Override
 	public DNode visit( EnclosedExpression n ) {
 		var node = new DExpression( Collections.singletonList( n.nestedExpression().accept( this ) ), "EnclosedExpression" );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -263,6 +268,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	@Override
 	public DNode visit( StaticAccessExpression n ) {
 		var node = new DStaticAccess( context.getTypeOfExpression( n.typeExpression() ) );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -274,13 +280,13 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		// return may have the type of a generic given by the function,
 		// if this is the case the instance of the generic must be used.
-		for( int i = 0; i < sig.getTypeParameters().size(); i++ ) {
-			if( sig.getReturnType().getTem() == sig.getTypeParameters().get( i ) ){
-				DType rrt = context.getTypeOfExpression( n.typeArguments().get( i ) );
-				mrt = new DType( rrt.getTem(), mrt.getRoles(), rrt.getTypeArguments() );
-				break;
-			}
-		}
+
+		Map< Template, DType > genericMap = Mapper.mapping( sig.getTypeParameters(),
+				n.typeArguments(),
+				Mapper.id(),
+				context::getTypeOfExpression );
+
+		mrt = replaceClassGeneric( replaceMethodGeneric( mrt, genericMap ) );
 
 		List< DNode > arguments = new ArrayList<>();
 
@@ -294,8 +300,27 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		var node = new DMethodCall( sig.getName(), arguments, mrt,
 				Mapper.map( sig.getParameters(), context::mapType ) );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
+	}
+
+	private DType replaceClassGeneric( DType type ){
+		DType replaceType = context.currentFrame().replaceGeneric( type.getName() );
+		if( replaceType != null ){
+			return new DType( replaceType.getTem(), type.getRoles(), replaceType.getTypeArguments() );
+		}
+		return new DType( type.getTem(), type.getRoles(),
+				Mapper.map( type.getTypeArguments(), this::replaceClassGeneric ) );
+	}
+
+	private DType replaceMethodGeneric( DType type, Map< Template, DType > genericMap ){
+		DType replaceType = genericMap.get( type.getTem() );
+		if( replaceType != null ){
+			return new DType( replaceType.getTem(), type.getRoles(), replaceType.getTypeArguments() );
+		}
+		return new DType( type.getTem(), type.getRoles(),
+				Mapper.map( type.getTypeArguments(), t -> replaceMethodGeneric( t, genericMap ) ) );
 	}
 
 	@Override
@@ -321,6 +346,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 						Mapper.map( p.getRoles(), roleMap::get ),
 						p.getTypeArguments() ) );
 		var node = new DClassInstantiation( dependencies, type.getName(), type, parameters );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -333,19 +359,23 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	@Override
 	public DNode visit( NotExpression n ) {
 		var node = new DExpression( Collections.singletonList( n.expression().accept( this ) ), "NotExpression" );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
 
-	private static final DThis thisNode = new DThis();
 	@Override
 	public DNode visit( ThisExpression n ) {
-		return thisNode;
+		var node = new DThis();
+		node.setPosition( n.position() );
+		return node;
 	}
 
 	@Override
 	public DNode visit( SuperExpression n ) {
-		return thisNode;
+		var node = new DThis();
+		node.setPosition( n.position() );
+		return node;
 	}
 
 	@Override
@@ -353,6 +383,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		Template nullTemplate = context.currentFrame().resolveIdentifier( "null" );
 		DType type = new DType( nullTemplate, context.mapWorldToString( n.worlds() ), Collections.emptyList() );
 		var node = new DLiteral( type );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -373,6 +404,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( LiteralExpression.BooleanLiteralExpression n ) {
 		DType type = context.getTypeFromName( "boolean", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		var node = new DLiteral( type );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -381,6 +413,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( LiteralExpression.DoubleLiteralExpression n ) {
 		DType type = context.getTypeFromName( "double", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		var node = new DLiteral( type );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -389,6 +422,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( LiteralExpression.IntegerLiteralExpression n ) {
 		DType type = context.getTypeFromName( "int", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		var node = new DLiteral( type );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}
@@ -397,6 +431,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( LiteralExpression.StringLiteralExpression n ) {
 		DType type = context.getTypeFromName( "String", context.rootFrame().roleFromName(n.world().name().identifier() ) );
 		var node = new DLiteral( type );
+		node.setPosition( n.position() );
 		n.setDependencies( node );
 		return node;
 	}

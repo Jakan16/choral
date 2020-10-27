@@ -42,6 +42,6 @@ public class DBinaryExpression extends DNode {
 
 	@Override
 	public String toString() {
-		return getName() + " " + operator + " " + getType();
+		return getName() + " " + operator + " " + getType() + " " + super.toString();
 	}
 }

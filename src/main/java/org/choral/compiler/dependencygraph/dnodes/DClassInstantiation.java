@@ -45,6 +45,6 @@ public class DClassInstantiation extends DNode {
 	@Override
 	public String toString() {
 		return type.toString() + " (" + this.parameters.stream().map( DType::toString )
-				.collect( Collectors.joining( ", " ) ) + ")";
+				.collect( Collectors.joining( ", " ) ) + ") " + super.toString();
 	}
 }

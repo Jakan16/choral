@@ -1,7 +1,6 @@
 package org.choral.compiler.dependencygraph.dnodes;
 
-import org.choral.ast.Node;
-import org.choral.ast.visitors.PrettyPrinterVisitor;
+import org.choral.ast.Position;
 
 import java.util.Collections;
 
@@ -10,8 +9,8 @@ import java.util.Collections;
  */
 public abstract class DNode {
 
-	private Node source;
 	private final String name;
+	private Position position;
 
 	public DNode( String name ) {
 		this.name = name;
@@ -21,12 +20,12 @@ public abstract class DNode {
 		return name;
 	}
 
-	public Node getSource() {
-		return source;
+	public Position getPosition() {
+		return position;
 	}
 
-	public void setSource( Node source ) {
-		this.source = source;
+	public void setPosition( Position position ) {
+		this.position = position;
 	}
 
 	public DRoot merge( DNode other ){
@@ -43,8 +42,8 @@ public abstract class DNode {
 
 	@Override
 	public String toString() {
-		if( getSource() != null ){
-			return getSource().accept( new PrettyPrinterVisitor() );
+		if( getPosition() != null ){
+			return getPosition().sourceFile() + ":" + position.line() + ":" + position.column();
 		}
 		return "";
 	}

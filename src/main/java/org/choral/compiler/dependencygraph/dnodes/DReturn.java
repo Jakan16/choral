@@ -30,6 +30,6 @@ public class DReturn extends DNode {
 
 	@Override
 	public String toString() {
-		return getName() + " " + returnType.toString();
+		return getName() + " " + returnType.toString() + " " + super.toString();
 	}
 }

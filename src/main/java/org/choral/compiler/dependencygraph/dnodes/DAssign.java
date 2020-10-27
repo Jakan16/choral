@@ -31,6 +31,6 @@ public class DAssign extends DNode {
 
 	@Override
 	public String toString() {
-		return getName() + " " + getType();
+		return getName() + " " + getType() + " " + super.toString();
 	}
 }

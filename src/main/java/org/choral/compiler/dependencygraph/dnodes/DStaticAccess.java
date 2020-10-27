@@ -24,6 +24,6 @@ public class DStaticAccess extends DNode {
 
 	@Override
 	public String toString() {
-		return type.toString();
+		return type.toString() + " " + super.toString();
 	}
 }
