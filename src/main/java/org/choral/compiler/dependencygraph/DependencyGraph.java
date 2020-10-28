@@ -637,13 +637,18 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 		 * @return An instance of {@link Role} with the same identifier
 		 */
 		public Role roleFromName( String identifier ){
+
+			if( identifier.equals( Role.UNBOUND_ROLE ) ){
+				return new TemporaryRole();
+			}
+
 			for( Role role: roleMap.keySet() ){
 				if( role.getName().equals( identifier ) ){
 					return role;
 				}
 			}
 
-			throw new IllegalStateException( "No role with such name" );
+			throw new IllegalStateException( "No role with such name: " + identifier );
 		}
 	}
 
