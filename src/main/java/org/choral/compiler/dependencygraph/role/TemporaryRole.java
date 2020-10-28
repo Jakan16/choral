@@ -4,6 +4,7 @@ public class TemporaryRole extends Role {
 
 	private Role parent;
 
+	@Override
 	public void coalesce( Role coalesceTo ){
 		assert parent == null;
 		parent = coalesceTo;

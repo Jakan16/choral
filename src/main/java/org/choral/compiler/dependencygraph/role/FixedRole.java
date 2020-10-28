@@ -19,6 +19,11 @@ public class FixedRole extends Role {
 	}
 
 	@Override
+	public void coalesce( Role coalesceTo ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public boolean isFixed() {
 		return true;
 	}

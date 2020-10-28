@@ -2,6 +2,8 @@ package org.choral.compiler.dependencygraph.role;
 
 public abstract class Role {
 
+	public static final String UNBOUND_ROLE = "UNBOUNDROLE";
+
 	private final int number;
 	private static int nonce = 0;
 
@@ -45,6 +47,8 @@ public abstract class Role {
 	public static boolean commonDisplayName( Role role1, Role role2 ){
 		return role1.getName().equals( role2.getName() );
 	}
+
+	public abstract void coalesce( Role coalesceTo );
 
 	/**
 	 * Weather the role have been fixed to an actual role, or is still to be fixed.

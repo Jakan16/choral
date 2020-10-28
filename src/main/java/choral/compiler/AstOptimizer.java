@@ -34,6 +34,7 @@ import choral.ast.body.Enum;
 import choral.ast.expression.*;
 import choral.ast.statement.*;
 import choral.ast.type.*;
+import choral.compiler.dependencygraph.role.Role;
 import choral.exceptions.SyntaxException;
 import choral.grammar.ChoralParser;
 import choral.grammar.ChoralVisitor;
@@ -345,6 +346,12 @@ public class AstOptimizer implements ChoralVisitor {
 	@Override
 	public WorldArgument visitWorldArgument( ChoralParser.WorldArgumentContext wp ) {
 		debugInfo();
+		if( wp == null ){
+			return new WorldArgument(
+					new Name( Role.UNBOUND_ROLE,
+						new Position( "generaterd", 0, 0 ) ),
+					new Position( "generaterd", 0, 0 ) );
+		}
 		return new WorldArgument(
 				getName( wp.Identifier() ),
 				getPosition( wp )

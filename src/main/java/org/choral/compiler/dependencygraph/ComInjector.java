@@ -6,6 +6,7 @@ import org.choral.ast.Node;
 import org.choral.ast.Position;
 import org.choral.ast.expression.*;
 import org.choral.ast.statement.ReturnStatement;
+import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
 import org.choral.compiler.dependencygraph.dnodes.DClassInstantiation;
 import org.choral.compiler.dependencygraph.dnodes.DMethodCall;
@@ -121,6 +122,47 @@ public class ComInjector extends ChoralVisitor {
 				safeVisit( insertComIfNecessary( n.expression(), targetType, sourceType ) ),
 				n.position()
 		);
+	}
+
+	@Override
+	public Node visit( LiteralExpression.IntegerLiteralExpression n ) {
+		if( isFixed( n.world().name() ) ){
+			return n;
+		}
+		return new LiteralExpression.IntegerLiteralExpression( n.content(), createWorldArg( n ) );
+	}
+
+	@Override
+	public Node visit( LiteralExpression.BooleanLiteralExpression n ) {
+		if( isFixed( n.world().name() ) ){
+			return n;
+		}
+
+		return new LiteralExpression.BooleanLiteralExpression( n.content(), createWorldArg( n ) );
+	}
+
+	@Override
+	public Node visit( LiteralExpression.DoubleLiteralExpression n ) {
+		if( isFixed( n.world().name() ) ){
+			return n;
+		}
+		return new LiteralExpression.DoubleLiteralExpression( n.content(), createWorldArg( n ) );
+	}
+
+	@Override
+	public Node visit( LiteralExpression.StringLiteralExpression n ) {
+		if( isFixed( n.world().name() ) ){
+			return n;
+		}
+		return new LiteralExpression.StringLiteralExpression( n.content(), createWorldArg( n ) );
+	}
+
+	private WorldArgument createWorldArg( Node n ){
+		return new WorldArgument( new Name( n.getDependencies().getType().getRoles().get( 0 ).getName() ) );
+	}
+
+	private boolean isFixed( Name name ){
+		return !name.identifier().equals( Role.UNBOUND_ROLE );
 	}
 
 	private Expression insertComIfNecessary( Expression exp, DType target, DType source ){

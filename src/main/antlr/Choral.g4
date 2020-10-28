@@ -436,6 +436,7 @@ staticGenericAccess
 
 primary
 	:	literal AT worldArgument
+	|   literal
 	|	NULL worldArguments
 	|	THIS
     |   SUPER
@@ -462,6 +463,7 @@ fieldAccess_no_primary
 argumentList
 	: expression ( COMMA expression )*
 	| literal AT LBRACK worldArgumentList RBRACK
+	| literal
 	;
 
 ifThenStatement
