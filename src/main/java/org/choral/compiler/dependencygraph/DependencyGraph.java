@@ -72,8 +72,11 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( CompilationUnit n ) {
 		DRoot nodes = DRoot.emptyRoot();
 		for( Class c : n.classes() ) {
-			this.context.pushFrame( n.packageDeclaration(), c );
-			nodes = nodes.merge( visit( c ) );
+			var tem = this.context.getTemplate( n.packageDeclaration(), c );
+			this.context.pushFrame( tem );
+			var dClass = new DClass( tem, visit( c ) );
+			dClass.setPosition( c.position() );
+			nodes = nodes.merge( dClass );
 			this.context.popFrame();
 		}
 		return nodes;
@@ -92,13 +95,19 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 			// the context frame stack may change during a visit to a method,
 			// but should return to the original state when the visit finishes.
 			assert frame == context.currentFrame();
-			frame.setCurrentMethod( context.currentTem().getMethodSig( definition ) );
-			nodes = nodes.merge( definition.accept( this ) );
+			var methodSig = context.currentTem().getMethodSig( definition );
+			frame.setCurrentMethod( methodSig );
+			DNode classRoot = definition.accept( this );
+			var dMethod = new DMethod( methodSig.getName(), classRoot );
+			dMethod.setPosition( definition.position() );
+			nodes = nodes.merge( dMethod );
 		}
 		frame.clearCurrentMethod();
 
 		for( ConstructorDefinition definition: n.constructors() ){
-			nodes = nodes.merge( definition.accept( this ) );
+			var dMethod = new DMethod( "constructor", definition.accept( this ) );
+			dMethod.setPosition( definition.position() );
+			nodes = nodes.merge( dMethod );
 		}
 
 		return nodes;
@@ -687,7 +696,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 			return type.copyWithMapping( currentFrame().roleMap );
 		}
 
-		private Template getTemplate( String packagePath, Class c ){
+		public Template getTemplate( String packagePath, Class c ){
 			return packageHandler.getTemplate( packagePath, c.name().identifier() );
 		}
 
