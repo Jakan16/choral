@@ -17,6 +17,20 @@ public class DependencyGraphPrinter implements DNodeVisitorInterface< StringBuil
 	}
 
 	@Override
+	public StringBuilder visit( DClass n ) {
+		sb.append( "Class: " ).append( n.toString() ).append( '\n' );
+		n.getMethods().accept( this );
+		return sb;
+	}
+
+	@Override
+	public StringBuilder visit( DMethod n ) {
+		sb.append( "Method: " ).append( n.toString() ).append( '\n' );
+		n.getContent().accept( this );
+		return sb;
+	}
+
+	@Override
 	public StringBuilder visit( DClassInstantiation n ) {
 		sb.append( "    ".repeat( indent ) ).append( n.toString() ).append( '\n' );
 
@@ -105,9 +119,13 @@ public class DependencyGraphPrinter implements DNodeVisitorInterface< StringBuil
 
 	@Override
 	public StringBuilder visit( DRoot n ) {
+		boolean first = true;
 		for( DNode dNode: n.getNodes() ){
+			if( !first ) {
+				sb.append( "---------------" ).append( '\n' );
+			}
+			first = false;
 			visit( dNode );
-			sb.append("---------------").append( '\n' );
 		}
 
 		return sb;

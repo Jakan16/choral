@@ -6,6 +6,7 @@ import org.choral.ast.Node;
 import org.choral.ast.Position;
 import org.choral.ast.expression.*;
 import org.choral.ast.statement.ReturnStatement;
+import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
 import org.choral.compiler.dependencygraph.dnodes.DClassInstantiation;
@@ -77,8 +78,16 @@ public class ComInjector extends ChoralVisitor {
 		List< Expression > mappedArgs = Mapper.map( n.arguments(), paramTypes,
 				(a, p) -> insertComIfNecessary( safeVisit( a ), p, a.getDependencies().getType() ) );
 
+		TypeExpression typeExpression = safeVisit( n.typeExpression() );
+
+		if( !isFixed( typeExpression.worldArguments().get( 0 ).name() ) ){
+			typeExpression = new TypeExpression( typeExpression.name(),
+					Collections.singletonList( createWorldArg( n ) ),
+					typeExpression.typeArguments() );
+		}
+
 		return new ClassInstantiationExpression(
-				safeVisit( n.typeExpression() ),
+				typeExpression,
 				mappedArgs,
 				visitAndCollect( n.typeArguments() ),
 				n.position()

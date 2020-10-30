@@ -4,6 +4,10 @@ public interface DNodeVisitorInterface < R > {
 
 	R visit( DNode n );
 
+	R visit( DClass n );
+
+	R visit( DMethod n );
+
 	R visit( DClassInstantiation n );
 
 	R visit( DExpression n );

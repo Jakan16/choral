@@ -445,6 +445,7 @@ primary
 
 classInstanceCreationExpression
 	: NEW methodArgs=typeArguments? Identifier worldArguments classArguments=typeArguments? LPAREN argumentList? RPAREN
+	| NEW methodArgs=typeArguments? Identifier classArguments=typeArguments? LPAREN argumentList? RPAREN
 	;
 
 enumCaseCreationExpression

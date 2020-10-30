@@ -326,6 +326,9 @@ public class AstOptimizer implements ChoralVisitor {
 	@Override
 	public List< WorldArgument > visitWorldArguments( ChoralParser.WorldArgumentsContext wps ) {
 		debugInfo();
+		if( wps == null ){
+			return Collections.singletonList( new WorldArgument( new Name( Role.UNBOUND_ROLE ) ) );
+		}
 		return ifPresent( wps.worldArgument() ).applyOrElse(
 				w -> Collections.singletonList( visitWorldArgument( w ) ),
 				() -> visitWorldArgumentList( wps.worldArgumentList() )

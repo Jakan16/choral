@@ -29,7 +29,11 @@ public abstract class DNode {
 	}
 
 	public DRoot merge( DNode other ){
-		return new DRoot( Collections.singletonList( this ) ).merge( other );
+		if( other instanceof DRoot ){
+			return (( DRoot ) other).mergeFlip( this );
+		}else{
+			return new DRoot( Collections.singletonList( this ) ).merge( other );
+		}
 	}
 
 	/**
