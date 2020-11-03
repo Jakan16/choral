@@ -3,7 +3,10 @@ package org.choral.compiler.dependencygraph.symboltable;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.dnodes.DVariable;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Holds all variable and parameter declarations
@@ -38,10 +41,13 @@ public class SymbolTable {
 	 * Adds a new variable definition to the current scope.
 	 * @param identifier The name of the variable
 	 * @param type The type of the variable
+	 * @return The {@link DVariable} representing the symbol added
 	 */
-	public void addSymbol( String identifier, DType type ){
+	public DVariable addSymbol( String identifier, DType type ){
 		assert getSymbol( identifier ) == null;
-		currentScope().addSymbol( new DVariable( identifier, type ) );
+		DVariable variableNode = new DVariable( identifier, type );
+		currentScope().addSymbol( variableNode );
+		return variableNode;
 	}
 
 	/**

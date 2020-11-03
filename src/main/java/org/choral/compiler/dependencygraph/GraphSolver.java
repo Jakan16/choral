@@ -4,7 +4,10 @@ import org.choral.compiler.dependencygraph.dnodes.*;
 import org.choral.compiler.dependencygraph.role.Role;
 import org.choral.compiler.dependencygraph.symboltable.Template;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class GraphSolver implements DNodeVisitorInterface< Void > {
 
@@ -37,7 +40,22 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DClassInstantiation n ) {
+		expressionRoot = false;
 		visitAll( n.getArguments() );
+
+		Mapper.map( n.getArguments(), n.getParameters(), ( dNode, type ) -> {
+			if( dNode.getType().getRoles().size() == 1 ){
+				Role argRole = dNode.getType().getRoles().get( 0 ).getCanonicalRole();
+				Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
+				if( !argRole.isFixed() ){
+					argRole.coalesce( paramRole );
+				}else if( !paramRole.isFixed() ){
+					paramRole.coalesce( argRole );
+				}
+			}
+			return dNode;
+		} );
+
 		return null;
 	}
 
@@ -80,9 +98,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 		Mapper.map( n.getArguments(), n.getParameters(), ( dNode, type ) -> {
 					if( dNode.getType().getRoles().size() == 1 ){
-						Role role = dNode.getType().getRoles().get( 0 ).getCanonicalRole();
-						if( !role.isFixed() ){
-							role.coalesce( type.getRoles().get( 0 ) );
+						Role argRole = dNode.getType().getRoles().get( 0 ).getCanonicalRole();
+						Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
+						if( !argRole.isFixed() ){
+							argRole.coalesce( paramRole );
+						}else if( !paramRole.isFixed() ){
+							paramRole.coalesce( argRole );
 						}
 					}
 					return dNode;
@@ -151,6 +172,7 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DRoot n ) {
+		Set< Role > possibleUnfixedRoles = new HashSet<>();
 		for( DNode node: n.getNodes() ){
 			expressionRoot = true;
 			visit( node );
@@ -158,11 +180,20 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 				var finalRole = node.getType().getRoles().get( 0 ).getCanonicalRole();
 
 				if( !finalRole.isFixed() ) {
-					// panic assign first role
-					finalRole.coalesce( currentClass.worldParameters().get( 0 ) );
+					// The role is not coalesced at this point, but may be in the future.
+					// So it is saved for later
+					possibleUnfixedRoles.add( finalRole );
 				}
 			}
 
+		}
+
+		for( Role role: possibleUnfixedRoles ){
+			role = role.getCanonicalRole();
+			// roles may have been fixed after being added to the set
+			if( !role.isFixed() ){
+				role.coalesce( currentClass.worldParameters().get( 0 ) );
+			}
 		}
 
 		return null;

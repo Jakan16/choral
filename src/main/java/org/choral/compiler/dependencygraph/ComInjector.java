@@ -4,6 +4,7 @@ import org.choral.ast.CompilationUnit;
 import org.choral.ast.Name;
 import org.choral.ast.Node;
 import org.choral.ast.Position;
+import org.choral.ast.body.VariableDeclaration;
 import org.choral.ast.expression.*;
 import org.choral.ast.statement.ReturnStatement;
 import org.choral.ast.type.TypeExpression;
@@ -90,6 +91,24 @@ public class ComInjector extends ChoralVisitor {
 				typeExpression,
 				mappedArgs,
 				visitAndCollect( n.typeArguments() ),
+				n.position()
+		);
+	}
+
+	@Override
+	public Node visit( VariableDeclaration n ) {
+
+		TypeExpression typeExpression = safeVisit( n.type() );
+
+		if( typeExpression.worldArguments().isEmpty() ){
+			typeExpression = new TypeExpression( typeExpression.name(),
+					Collections.singletonList( createWorldArg( n ) ),
+					typeExpression.typeArguments() );
+		}
+
+		return new VariableDeclaration(
+				safeVisit( n.name() ),
+				typeExpression,
 				n.position()
 		);
 	}

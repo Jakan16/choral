@@ -509,7 +509,9 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 	public DNode visit( VariableDeclaration n ) {
 		// Not needed for the final graph,
 		// but used for resolving identifiers.
-		context.addSymbol( n.name().identifier(), context.getTypeOfExpression( n.type() ) );
+		DVariable variableNode = context.addSymbol( n.name().identifier(),
+				context.getTypeOfExpression( n.type() ) );
+		n.setDependencies( variableNode );
 		return DRoot.emptyRoot();
 	}
 
@@ -721,9 +723,16 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 			this.contextFrames.removeFirst();
 		}
 
-		public void addSymbol( String identifier, DType type ){
+		public DVariable addSymbol( String identifier, DType type ){
 			assert contextFrames.size() == 1;
-			symbolTable.addSymbol( identifier, type );
+
+			if( type.getRoles().isEmpty() ){
+				type = new DType( type.getTem(),
+						Mapper.map( type.getTem().worldParameters(), (r) -> new TemporaryRole() ),
+						type.getTypeArguments() );
+			}
+
+			return symbolTable.addSymbol( identifier, type );
 		}
 
 		public void enterScope(){
