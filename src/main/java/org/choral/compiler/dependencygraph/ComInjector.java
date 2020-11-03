@@ -12,6 +12,7 @@ import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
 import org.choral.compiler.dependencygraph.dnodes.DClassInstantiation;
 import org.choral.compiler.dependencygraph.dnodes.DMethodCall;
+import org.choral.compiler.dependencygraph.dnodes.DStaticAccess;
 import org.choral.compiler.dependencygraph.dnodes.DType;
 import org.choral.compiler.dependencygraph.role.Role;
 
@@ -126,6 +127,15 @@ public class ComInjector extends ChoralVisitor {
 				visitAndCollect( n.typeArguments() ),
 				n.position()
 		);
+	}
+
+	@Override
+	public Node visit( FieldAccessExpression n ) {
+		if( !( n.getDependencies() instanceof DStaticAccess ) ) {
+			return n;
+		}
+		// if dependencies is a static access, change the node
+		return new StaticAccessExpression( new TypeExpression( n.name(), Collections.singletonList( createWorldArg( n ) ), Collections.emptyList() ), n.position() );
 	}
 
 	@Override
