@@ -32,6 +32,19 @@ public class ClassTemplate extends Template {
 		if( classNode.extendsClass() != null ){
 			return Collections.singletonList( typeExpressionToDType( classNode.extendsClass() ) );
 		}
+
+		if( classNode.worldParameters().size() == 1 ){
+			// If nothing else is extended, Object is implicit
+			Template objectTem = getHoldingPackage().getRoot().getPackage( PackageHandler.langPath )
+					.getTemplate( "Object" );
+			if( objectTem != this ) { // Object cannot extend itself
+				return Collections.singletonList(
+						new DType( objectTem,
+								Collections.singletonList( worldParameters().get( 0 ) ),
+								Collections.emptyList() ) );
+			}
+		}
+
 		return Collections.emptyList();
 	}
 
