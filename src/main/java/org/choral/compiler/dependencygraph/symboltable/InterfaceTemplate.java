@@ -9,6 +9,7 @@ import org.choral.compiler.dependencygraph.dnodes.DVariable;
 import org.choral.compiler.dependencygraph.role.FixedRole;
 import org.choral.compiler.dependencygraph.role.Role;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -27,7 +28,21 @@ public class InterfaceTemplate extends Template {
 
 	@Override
 	public List< DType > prepareSuperType() {
-		return typeExpressionsToDTypes( interfaceNode.extendsInterfaces() );
+		if( interfaceNode.extendsInterfaces().size() > 0 ) {
+			return typeExpressionsToDTypes( interfaceNode.extendsInterfaces() );
+		}
+
+		if( interfaceNode.worldParameters().size() == 1 ){
+			// If nothing else is extended, Object is implicit
+			Template objectTem = getHoldingPackage().getRoot().getPackage( PackageHandler.langPath )
+					.getTemplate( "Object" );
+			return Collections.singletonList(
+					new DType( objectTem,
+							Collections.singletonList( worldParameters().get( 0 ) ),
+							Collections.emptyList() ) );
+		}
+
+		return Collections.emptyList();
 	}
 
 	@Override
