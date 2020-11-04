@@ -7,6 +7,10 @@ public class TemporaryRole extends Role {
 	@Override
 	public void coalesce( Role coalesceTo ){
 		assert parent == null;
+		if( this == coalesceTo.getCanonicalRole() ){
+			// coalescing a role to itself does nothing
+			return;
+		}
 		parent = coalesceTo;
 	}
 

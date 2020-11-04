@@ -24,6 +24,8 @@ package choral.compiler;
 import choral.ast.CompilationUnit;
 import choral.ast.Name;
 import choral.ast.Node;
+import choral.ast.expression.AssignExpression;
+import choral.ast.expression.BinaryExpression;
 import choral.ast.statement.*;
 import choral.ast.visitors.ChoralVisitor;
 
@@ -70,7 +72,30 @@ public class AstDesugarer extends ChoralVisitor {
 		}
 	}
 
-//	@Override
+	@Override
+	public Node visit( AssignExpression n ) {
+		if( n.operator() == AssignExpression.Operator.ASSIGN ){
+			return super.visit( n );
+		}
+
+		var bop = new BinaryExpression( n.target(), n.value(), mapOperator( n.operator() ), n.position() );
+		return new AssignExpression( bop, n.target(), AssignExpression.Operator.ASSIGN, n.position() );
+	}
+
+	private BinaryExpression.Operator mapOperator( AssignExpression.Operator operator ){
+		return switch( operator ){
+			case OR_ASSIGN -> BinaryExpression.Operator.OR;
+			case ADD_ASSIGN -> BinaryExpression.Operator.PLUS;
+			case AND_ASSIGN -> BinaryExpression.Operator.AND;
+			case DIV_ASSIGN -> BinaryExpression.Operator.DIVIDE;
+			case MOD_ASSIGN -> BinaryExpression.Operator.REMAINDER;
+			case MUL_ASSIGN -> BinaryExpression.Operator.MULTIPLY;
+			case SUB_ASSIGN -> BinaryExpression.Operator.MINUS;
+			default -> throw new IllegalStateException( "Unexpected value: " + operator );
+		};
+	}
+
+	//	@Override
 //	public Node visit( IfStatement n ) {
 //		Map< SwitchArgument, Statement > m = new HashMap<>();
 //		m.put( new SwitchArgument.SwitchArgumentLabel( new Name( "True" ) ), ( Statement ) visit( n.ifBranch() ) );

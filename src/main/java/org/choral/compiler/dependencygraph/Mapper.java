@@ -131,6 +131,20 @@ public class Mapper {
 	}
 
 	/**
+	 * Maps a {@link Collection} of {@link T} to {@link Collection} of {@link R}
+	 * using the given element wise mapping function.
+	 *
+	 * @param collection The original collection
+	 * @param mapFunction The per element mapping function
+	 * @param <T> The type of the original {@link Collection}
+	 * @param <R> The type of the new {@link Collection}
+	 * @return A new {@link Collection} with all elements mapped
+	 */
+	public static < T, R > Collection< R > map( Collection< T > collection, Function< T, R > mapFunction ){
+		return collection.stream().map( mapFunction ).collect( Collectors.toList() );
+	}
+
+	/**
 	 * Creates a list from two {@link Iterable} inputs by repeatedly applying mapFunc on each index on the iterables.
 	 * @param from1 The first source
 	 * @param from2 The second source
