@@ -44,7 +44,9 @@ public class SymbolTable {
 	 * @return The {@link DVariable} representing the symbol added
 	 */
 	public DVariable addSymbol( String identifier, DType type ){
-		assert getSymbol( identifier ) == null;
+		if( getSymbol( identifier ) != null ){
+			throw new IllegalStateException( "Variable " + identifier + " has already been declared" );
+		}
 		DVariable variableNode = new DVariable( identifier, type );
 		currentScope().addSymbol( variableNode );
 		return variableNode;

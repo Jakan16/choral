@@ -4,7 +4,6 @@ import org.choral.compiler.dependencygraph.dnodes.*;
 import org.choral.compiler.dependencygraph.role.Role;
 import org.choral.compiler.dependencygraph.symboltable.Template;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -13,6 +12,7 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	private Template currentClass;
 	private boolean expressionRoot = true;
+	private final Set< Role > possibleUnfixedRoles = new HashSet<>();
 
 	public static DRoot solve( DRoot root ){
 		var gs = new GraphSolver();
@@ -49,8 +49,10 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 				Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
 				if( !argRole.isFixed() ){
 					argRole.coalesce( paramRole );
+					possibleUnfixedRoles.add( paramRole );
 				}else if( !paramRole.isFixed() ){
 					paramRole.coalesce( argRole );
+					possibleUnfixedRoles.add( argRole );
 				}
 			}
 			return dNode;
@@ -102,8 +104,10 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 						Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
 						if( !argRole.isFixed() ){
 							argRole.coalesce( paramRole );
+							possibleUnfixedRoles.add( paramRole );
 						}else if( !paramRole.isFixed() ){
 							paramRole.coalesce( argRole );
+							possibleUnfixedRoles.add( argRole );
 						}
 					}
 					return dNode;
@@ -167,12 +171,14 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			role.coalesce( leftRole );
 		}
 
+		possibleUnfixedRoles.add( role );
+
 		return null;
 	}
 
 	@Override
 	public Void visit( DRoot n ) {
-		Set< Role > possibleUnfixedRoles = new HashSet<>();
+		possibleUnfixedRoles.clear();
 		for( DNode node: n.getNodes() ){
 			expressionRoot = true;
 			visit( node );

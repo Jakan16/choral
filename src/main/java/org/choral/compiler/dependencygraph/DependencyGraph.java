@@ -243,8 +243,11 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 					context.getTypeFromName( "boolean", new TemporaryRole() );
 			case OR,
 				AND -> context.getTypeFromName( "int", new TemporaryRole() );
-			case PLUS,
-				MINUS,
+			case PLUS -> context.getTypeFromName( left.getTem().getName().equals( "String" ) ||
+							right.getTem().getName().equals( "String" ) ? "String" : (left.getTem().getName().equals( "double" ) ||
+							right.getTem().getName().equals( "double" ) ? "double" : "int"),
+					new TemporaryRole() );
+			case MINUS,
 				MULTIPLY,
 				DIVIDE,
 				REMAINDER ->
@@ -269,7 +272,21 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( FieldAccessExpression n ) {
-		var node = context.resolveIdentifier( n.name().identifier() );
+		DNode node;
+		try {
+			node = context.resolveIdentifier( n.name().identifier() );
+		}catch( IllegalStateException e ){
+			// if not variable or field, it may be an static access
+			Template tem = context.currentFrame().resolveIdentifier( n.name().identifier() );
+			if( tem == null || tem == Template.unknownTemplate() ){
+				throw e;
+			}
+			node = new DStaticAccess(
+					new DType(
+							tem,
+							Mapper.map( tem.worldParameters(), (t) -> new TemporaryRole() ),
+							Collections.emptyList() ) );
+		}
 		n.setDependencies( node );
 		return node;
 	}

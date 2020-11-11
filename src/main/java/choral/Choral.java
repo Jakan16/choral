@@ -163,6 +163,10 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				)
 						.collect( Collectors.toList() );
 
+				/*for( var cu: sourceUnits ){
+					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
+				}*/
+				sourceUnits = Mapper.map( sourceUnits, AstDesugarer::desugar );
 				sourceUnits = DependencyGraph.walk( sourceUnits, headerUnits );
 
 				AtomicReference< Collection< CompilationUnit > > annotatedUnits = new AtomicReference<>();
