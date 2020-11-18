@@ -23,8 +23,11 @@ package choral;
 
 import choral.ast.CompilationUnit;
 import choral.ast.Position;
+import choral.ast.visitors.PrettyPrinterVisitor;
 import choral.compiler.*;
 import choral.compiler.Compiler;
+import choral.compiler.dependencygraph.DependencyGraph;
+import choral.compiler.dependencygraph.Mapper;
 import choral.compiler.knowledge.KnowledgeInjector;
 import choral.exceptions.AstPositionedException;
 import choral.exceptions.ChoralCompoundException;
@@ -163,22 +166,21 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				)
 						.collect( Collectors.toList() );
 
-				/*for( var cu: sourceUnits ){
-					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
-				}*/
-
 				sourceUnits = Mapper.map( sourceUnits, AstDesugarer::desugar );
 				sourceUnits = DependencyGraph.walk( sourceUnits, headerUnits );
 
 				AtomicReference< Collection< CompilationUnit > > annotatedUnits = new AtomicReference<>();
-				profilerLog( "typechecking", () -> annotatedUnits.set( Typer.annotate( sourceUnits,
+				Collection< CompilationUnit > finalSourceUnits = sourceUnits;
+				profilerLog( "typechecking", () -> annotatedUnits.set( Typer.annotate(
+						finalSourceUnits,
 						headerUnits ) ) );
 
-				for( var cu: annotatedUnits ){
+				annotatedUnits.set( KnowledgeInjector.inject( annotatedUnits.get(), headerUnits ) );
+				Typer.annotate( annotatedUnits.get(), headerUnits );
+
+				for( var cu: annotatedUnits.get() ){
 					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
 				}
-				annotatedUnits.set( KnowledgeInjector.inject( annotatedUnits.get() ) );
-				Typer.annotate( annotatedUnits.get(), headerUnits );
 
 				profilerLog( "projectability check", () -> Compiler.checkProjectiability( annotatedUnits.get() ) );
 
