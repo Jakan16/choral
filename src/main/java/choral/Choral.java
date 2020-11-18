@@ -166,6 +166,7 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				/*for( var cu: sourceUnits ){
 					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
 				}*/
+
 				sourceUnits = Mapper.map( sourceUnits, AstDesugarer::desugar );
 				sourceUnits = DependencyGraph.walk( sourceUnits, headerUnits );
 
@@ -173,6 +174,9 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				profilerLog( "typechecking", () -> annotatedUnits.set( Typer.annotate( sourceUnits,
 						headerUnits ) ) );
 
+				for( var cu: annotatedUnits ){
+					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
+				}
 				annotatedUnits.set( KnowledgeInjector.inject( annotatedUnits.get() ) );
 				Typer.annotate( annotatedUnits.get(), headerUnits );
 

@@ -57,15 +57,16 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		GraphSolver.solve( root );
 
+		System.out.println( DependencyGraphPrinter.walk( root ) );
 		return ComInjector.inject( cus );
-		//System.out.println( DependencyGraphPrinter.walk( root ) );
+		/*System.out.println( DependencyGraphPrinter.walk( root ) );
 
-		/*var injected = ComInjector.inject( cus );
+		var injected = ComInjector.inject( cus );
 		for( var cu: injected ){
 			System.out.println(new PrettyPrinterVisitor().visit( cu ) );
 		}
 
-		return injected;*/
+		return injected; */
 	}
 
 	@Override

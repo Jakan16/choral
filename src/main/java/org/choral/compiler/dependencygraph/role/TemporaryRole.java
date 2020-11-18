@@ -1,8 +1,11 @@
 package org.choral.compiler.dependencygraph.role;
 
+import java.util.List;
+
 public class TemporaryRole extends Role {
 
 	private Role parent;
+	private List<Role> possibleRoles;
 
 	@Override
 	public void coalesce( Role coalesceTo ){
@@ -29,6 +32,9 @@ public class TemporaryRole extends Role {
 	public String getName() {
 		Role canonical = getCanonicalRole();
 		if( canonical == this ){
+			if( this.possibleRoles != null && this.possibleRoles.size() > 0 ){
+				return this.possibleRoles.get( 0 ).getName();
+			}
 			throw new IllegalStateException( "Temporary not coalesced to fixed role has no name" );
 		}
 		return canonical.getName();
@@ -40,6 +46,16 @@ public class TemporaryRole extends Role {
 			return false;
 		}
 		return getCanonicalRole().isFixed();
+	}
+
+	@Override
+	public void setPossibleRoles( List< Role > role ) {
+		this.possibleRoles = role;
+	}
+
+	@Override
+	public List< Role > getPossibleRoles() {
+		return this.possibleRoles;
 	}
 
 	@Override

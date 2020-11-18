@@ -168,7 +168,7 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		}else if( isRoot ){
 			// If both are fixed at different roles,
 			// leave role unless it is the root of the expression.
-			role.coalesce( leftRole );
+			//role.coalesce( leftRole );
 		}
 
 		possibleUnfixedRoles.add( role );
@@ -198,7 +198,8 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			role = role.getCanonicalRole();
 			// roles may have been fixed after being added to the set
 			if( !role.isFixed() ){
-				role.coalesce( currentClass.worldParameters().get( 0 ) );
+				//role.coalesce( currentClass.worldParameters().get( 0 ) );
+				role.setPossibleRoles( currentClass.worldParameters() );
 			}
 		}
 

@@ -1,5 +1,7 @@
 package org.choral.compiler.dependencygraph.role;
 
+import java.util.List;
+
 public abstract class Role {
 
 	public static final String UNBOUND_ROLE = "UNBOUNDROLE";
@@ -55,4 +57,8 @@ public abstract class Role {
 	 * @return true if an actual role is assigned to this instance.
 	 */
 	public abstract boolean isFixed();
+
+	public abstract void setPossibleRoles( List<Role> role );
+
+	public abstract List<Role> getPossibleRoles();
 }

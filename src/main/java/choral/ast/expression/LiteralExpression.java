@@ -76,6 +76,8 @@ public abstract class LiteralExpression< T > extends Expression {
 
 	public static class BooleanLiteralExpression extends LiteralExpression< Boolean > {
 
+		private Expression originalExpression = null;
+
 		public BooleanLiteralExpression( final Boolean content, final WorldArgument world ) {
 			super( content, world );
 		}
@@ -84,6 +86,14 @@ public abstract class LiteralExpression< T > extends Expression {
 				final Boolean content, final WorldArgument world, final Position position
 		) {
 			super( content, world, position );
+		}
+
+		public Expression getOriginalExpression() {
+			return originalExpression;
+		}
+
+		public void setOriginalExpression( Expression originalExpression ) {
+			this.originalExpression = originalExpression;
 		}
 
 		@Override

@@ -9,6 +9,7 @@ import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
 import org.choral.ast.visitors.ChoralVisitor;
 import org.choral.compiler.Typer;
+import org.choral.compiler.dependencygraph.ComInjector;
 import org.choral.compiler.merge.MergeException;
 import org.choral.compiler.merge.StatementsMerger;
 import org.choral.compiler.soloist.StatementsProjector;
@@ -17,6 +18,7 @@ import org.choral.types.World;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class KnowledgeInjector extends ChoralVisitor {
 
@@ -59,45 +61,69 @@ public class KnowledgeInjector extends ChoralVisitor {
 
 	@Override
 	public Node visit( IfStatement n ) {
-		String choosingRole = getRole( n.condition() );
+		Expression condition = (Expression) this.visit( n.condition() );
 
-		Expression conditionCopy = (Expression) this.visit( n.condition() );
-
-		roleScopes.scope( choosingRole );
+		// collect roles from if branch
+		roleScopes.scope();
 		Statement ifBranch = (Statement) n.ifBranch().accept( this );
 		RoleScope ifRoles = roleScopes.getRoles();
 		boolean childScopesModified = roleScopes.isModified();
 		roleScopes.exitScope();
 
-		roleScopes.scope( choosingRole );
+		// collect roles from else branch
+		roleScopes.scope();
 		Statement elseBranch = (Statement) n.elseBranch().accept( this );
 		RoleScope elseRoles = roleScopes.getRoles();
 		childScopesModified |= roleScopes.isModified();
 		roleScopes.exitScope();
 
+		// do nothing if any branch has been modified during the current iteration.
 		if( !childScopesModified ) {
-			for( String role : ifRoles.roles() ) {
-				if( !elseRoles.contains( role ) || !mergeable( role, n.ifBranch(), n.elseBranch() ) ) {
-					String channel = getChannel( role, choosingRole );
-					ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
-					elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
+			// set of roles that implement different behaviours in each branch.
+			Set< String > selectRoles =
+					Stream.concat(
+						ifRoles.roles().stream().filter( role -> !elseRoles.contains( role ) || !mergeable( role, n.ifBranch(), n.elseBranch() ) ),
+						elseRoles.roles().stream().filter( role -> !ifRoles.contains( role ) ) )
+					.collect(Collectors.toSet());
+
+			String choosingRole = getRole( n.condition() );
+			// Used when the role of the guard is not fixed,
+			// it is then coalesced to one of the roles needing the result of the guard.
+			if( n.condition() instanceof LiteralExpression.BooleanLiteralExpression ){
+				var con = ((LiteralExpression.BooleanLiteralExpression) n.condition());
+				if( con.getOriginalExpression() != null ){
+					final String roleName = selectRoles.iterator().next();
+					choosingRole = roleName;
+					// translate String to Role
+					var opRole = con.getOriginalExpression().getDependencies()
+							.getType().getRoles().get( 0 ).getPossibleRoles().stream()
+							.filter( r -> r.getName().equals( roleName ) ).findAny();
+
+					// coalesce the role if any, otherwise rely on defaults.
+					opRole.ifPresent( role -> con.getOriginalExpression().getDependencies()
+							.getType().getRoles().get( 0 ).coalesce( role ) );
+					// calculate communications for the new condition
+					condition = ComInjector.inject( con.getOriginalExpression() );
 					roleScopes.mark();
 				}
 			}
 
-			for( String role : elseRoles.roles() ) {
-				if( !ifRoles.contains( role ) ) {
-					String channel = getChannel( role, choosingRole );
-					ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
-					elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
-					roleScopes.mark();
-				}
+			// the role calculating the guard, does not have to inform itself
+			selectRoles.remove( choosingRole );
+
+			for( String role : selectRoles ) {
+				String channel = getChannel( role, choosingRole );
+				ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
+				elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
+			}
+
+			if( selectRoles.size() > 0 ){
+				roleScopes.mark();
 			}
 		}
 
-
 		return new IfStatement(
-				conditionCopy,
+				condition,
 				ifBranch,
 				elseBranch,
 				(Statement) n.continuation().accept( this ),
@@ -233,8 +259,8 @@ public class KnowledgeInjector extends ChoralVisitor {
 			scopes.getFirst().addRoles( rs );
 		}
 
-		void scope( String owner ){
-			scopes.addFirst( new RoleScope( owner ) );
+		void scope(){
+			scopes.addFirst( new RoleScope() );
 		}
 
 		void exitScope(){

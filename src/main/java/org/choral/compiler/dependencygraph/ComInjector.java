@@ -6,6 +6,7 @@ import org.choral.ast.Node;
 import org.choral.ast.Position;
 import org.choral.ast.body.VariableDeclaration;
 import org.choral.ast.expression.*;
+import org.choral.ast.statement.IfStatement;
 import org.choral.ast.statement.ReturnStatement;
 import org.choral.ast.type.TypeExpression;
 import org.choral.ast.type.WorldArgument;
@@ -27,6 +28,32 @@ public class ComInjector extends ChoralVisitor {
 		return cus.stream()
 				.map( c -> (CompilationUnit) new ComInjector().visit( c ) )
 				.collect( Collectors.toList() );
+	}
+
+	public static <T extends Node> T inject( T node ){
+		return (T) node.accept( new ComInjector() );
+	}
+
+	@Override
+	public Node visit( IfStatement n ) {
+
+		Expression condition;
+		if( n.condition().getDependencies().getType().getRoles().isEmpty() ||
+				n.condition().getDependencies().getType().getRoles().get( 0 ).isFixed() ) {
+			condition = safeVisit( n.condition() );
+		}else {
+			var boolExp = new LiteralExpression.BooleanLiteralExpression( true, createWorldArg( n.condition() ) );
+			boolExp.setOriginalExpression( n.condition() );
+			condition = boolExp;
+		}
+
+		return new IfStatement(
+				condition,
+				safeVisit( n.ifBranch() ),
+				safeVisit( n.elseBranch() ),
+				safeVisit( n.continuation() ),
+				n.position()
+		);
 	}
 
 	@Override
@@ -76,7 +103,7 @@ public class ComInjector extends ChoralVisitor {
 	@Override
 	public Node visit( ClassInstantiationExpression n ) {
 
-		List< DType > paramTypes =  ((DClassInstantiation) n.getDependencies()).getParameters();
+		List< DType > paramTypes = ((DClassInstantiation) n.getDependencies()).getParameters();
 		List< Expression > mappedArgs = Mapper.map( n.arguments(), paramTypes,
 				(a, p) -> insertComIfNecessary( safeVisit( a ), p, a.getDependencies().getType() ) );
 

@@ -1,5 +1,7 @@
 package org.choral.compiler.dependencygraph.role;
 
+import java.util.List;
+
 public class FixedRole extends Role {
 
 	private final String name;
@@ -26,6 +28,16 @@ public class FixedRole extends Role {
 	@Override
 	public boolean isFixed() {
 		return true;
+	}
+
+	@Override
+	public void setPossibleRoles( List< Role > role ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public List< Role > getPossibleRoles() {
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
