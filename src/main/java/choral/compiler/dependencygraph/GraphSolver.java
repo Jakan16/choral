@@ -148,7 +148,13 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DBinaryExpression n ) {
-		boolean isRoot = expressionRoot;
+		minCom( n );
+		//moveRight( n );
+		return null;
+	}
+
+	public void minCom( DBinaryExpression n ){
+		//boolean isRoot = expressionRoot;
 		expressionRoot = false;
 		visit( n.getLeft() );
 		visit( n.getRight() );
@@ -165,15 +171,29 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		}else if( rightRole == leftRole ){
 			// both are fixed at the same role
 			role.coalesce( rightRole );
-		}else if( isRoot ){
+		}//else if( isRoot ){
 			// If both are fixed at different roles,
 			// leave role unless it is the root of the expression.
 			//role.coalesce( leftRole );
+		//}
+
+		possibleUnfixedRoles.add( role );
+	}
+
+	public void moveRight( DBinaryExpression n ){
+		visit( n.getLeft() );
+		visit( n.getRight() );
+		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
+		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
+		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
+
+		role.coalesce( leftRole );
+
+		if( !rightRole.isFixed() ){
+			rightRole.coalesce( leftRole );
 		}
 
 		possibleUnfixedRoles.add( role );
-
-		return null;
 	}
 
 	@Override
