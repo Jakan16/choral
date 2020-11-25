@@ -1,11 +1,14 @@
 package choral.compiler.dependencygraph.role;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class TemporaryRole extends Role {
 
 	private Role parent;
 	private List<Role> possibleRoles;
+	private Set<Role> preferredRoles = Collections.emptySet();
 
 	@Override
 	public void coalesce( Role coalesceTo ){
@@ -15,6 +18,11 @@ public class TemporaryRole extends Role {
 			return;
 		}
 		parent = coalesceTo;
+	}
+
+	@Override
+	public void coalesceIfUnfixed( Role coalesceTo ) {
+		coalesce( coalesceTo );
 	}
 
 	@Override
@@ -56,6 +64,16 @@ public class TemporaryRole extends Role {
 	@Override
 	public List< Role > getPossibleRoles() {
 		return this.possibleRoles;
+	}
+
+	@Override
+	public Set< Role > getPreferredRoles() {
+		return this.preferredRoles;
+	}
+
+	@Override
+	public void setPreferredRoles( Set<Role> roles ) {
+		this.preferredRoles = roles;
 	}
 
 	@Override

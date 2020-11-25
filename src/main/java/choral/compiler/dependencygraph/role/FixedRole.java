@@ -1,6 +1,8 @@
 package choral.compiler.dependencygraph.role;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class FixedRole extends Role {
 
@@ -26,6 +28,11 @@ public class FixedRole extends Role {
 	}
 
 	@Override
+	public void coalesceIfUnfixed( Role coalesceTo ) {
+		// no op
+	}
+
+	@Override
 	public boolean isFixed() {
 		return true;
 	}
@@ -37,6 +44,16 @@ public class FixedRole extends Role {
 
 	@Override
 	public List< Role > getPossibleRoles() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Set< Role > getPreferredRoles() {
+		return Collections.singleton( this );
+	}
+
+	@Override
+	public void setPreferredRoles( Set<Role> roles ) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -148,7 +148,8 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DBinaryExpression n ) {
-		minCom( n );
+		//minCom( n );
+		minComPreferred( n );
 		//moveRight( n );
 		return null;
 	}
@@ -176,6 +177,50 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			// leave role unless it is the root of the expression.
 			//role.coalesce( leftRole );
 		//}
+
+		possibleUnfixedRoles.add( role );
+	}
+
+	public void minComPreferred( DBinaryExpression n ){
+		//boolean isRoot = expressionRoot;
+		expressionRoot = false;
+		visit( n.getLeft() );
+		visit( n.getRight() );
+		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
+		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
+		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
+
+		if( rightRole.getPreferredRoles().isEmpty() ) {
+			// right is not bound anywhere, bubble left
+			role.coalesce( leftRole );
+			rightRole.coalesce( leftRole );
+		} else if( leftRole.getPreferredRoles().isEmpty() ){
+			// left is not bound anywhere, bubble right
+			role.coalesce( rightRole );
+			leftRole.coalesce( rightRole );
+		}else{
+			var intersection = new HashSet<>( rightRole.getPreferredRoles() );
+			intersection.retainAll( leftRole.getPreferredRoles() );
+
+			if( intersection.isEmpty() ){
+				// if intersection is empty, use union.
+				var preferredRoles = new HashSet<>( rightRole.getPreferredRoles() );
+				preferredRoles.addAll( leftRole.getPreferredRoles() );
+				role.setPreferredRoles( preferredRoles );
+				leftRole.coalesceIfUnfixed( role );
+				rightRole.coalesceIfUnfixed( role );
+			}else if( intersection.size() == 1 ){
+				// if only one intersects, coalesce to it.
+				role.coalesce( intersection.iterator().next() );
+				leftRole.coalesceIfUnfixed( role );
+				rightRole.coalesceIfUnfixed( role );
+			}else { // intersection.size() > 1
+				// if intersection is multiple, use it
+				role.setPreferredRoles( intersection );
+				leftRole.coalesceIfUnfixed( role );
+				rightRole.coalesceIfUnfixed( role );
+			}
+		}
 
 		possibleUnfixedRoles.add( role );
 	}

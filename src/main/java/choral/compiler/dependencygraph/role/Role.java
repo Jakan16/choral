@@ -1,6 +1,7 @@
 package choral.compiler.dependencygraph.role;
 
 import java.util.List;
+import java.util.Set;
 
 public abstract class Role {
 
@@ -52,6 +53,8 @@ public abstract class Role {
 
 	public abstract void coalesce( Role coalesceTo );
 
+	public abstract void coalesceIfUnfixed( Role coalesceTo );
+
 	/**
 	 * Weather the role have been fixed to an actual role, or is still to be fixed.
 	 * @return true if an actual role is assigned to this instance.
@@ -61,4 +64,8 @@ public abstract class Role {
 	public abstract void setPossibleRoles( List<Role> role );
 
 	public abstract List<Role> getPossibleRoles();
+
+	public abstract Set<Role> getPreferredRoles();
+
+	public abstract void setPreferredRoles( Set<Role> roles );
 }
