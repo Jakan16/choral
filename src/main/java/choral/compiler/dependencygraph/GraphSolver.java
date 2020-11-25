@@ -151,10 +151,11 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		//minCom( n );
 		minComPreferred( n );
 		//moveRight( n );
+		//sendDirect( n );
 		return null;
 	}
 
-	public void minCom( DBinaryExpression n ){
+	private void minCom( DBinaryExpression n ){
 		//boolean isRoot = expressionRoot;
 		expressionRoot = false;
 		visit( n.getLeft() );
@@ -181,7 +182,7 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		possibleUnfixedRoles.add( role );
 	}
 
-	public void minComPreferred( DBinaryExpression n ){
+	private void minComPreferred( DBinaryExpression n ){
 		//boolean isRoot = expressionRoot;
 		expressionRoot = false;
 		visit( n.getLeft() );
@@ -225,7 +226,7 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		possibleUnfixedRoles.add( role );
 	}
 
-	public void moveRight( DBinaryExpression n ){
+	private void moveRight( DBinaryExpression n ){
 		visit( n.getLeft() );
 		visit( n.getRight() );
 		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
@@ -233,12 +234,19 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
 
 		role.coalesce( leftRole );
-
-		if( !rightRole.isFixed() ){
-			rightRole.coalesce( leftRole );
-		}
-
+		rightRole.coalesceIfUnfixed( leftRole );
 		possibleUnfixedRoles.add( role );
+	}
+
+	private void sendDirect( DBinaryExpression n ){
+		visit( n.getLeft() );
+		visit( n.getRight() );
+		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
+		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
+		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
+
+		rightRole.coalesceIfUnfixed( role );
+		leftRole.coalesceIfUnfixed( role );
 	}
 
 	@Override
