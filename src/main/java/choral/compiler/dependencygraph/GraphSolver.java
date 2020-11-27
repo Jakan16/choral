@@ -208,19 +208,20 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 				var preferredRoles = new HashSet<>( rightRole.getPreferredRoles() );
 				preferredRoles.addAll( leftRole.getPreferredRoles() );
 				role.setPreferredRoles( preferredRoles );
-				leftRole.coalesceIfUnfixed( role );
-				rightRole.coalesceIfUnfixed( role );
+				role.setPreferredAUnion( true );
 			}else if( intersection.size() == 1 ){
 				// if only one intersects, coalesce to it.
 				role.coalesce( intersection.iterator().next() );
-				leftRole.coalesceIfUnfixed( role );
-				rightRole.coalesceIfUnfixed( role );
 			}else { // intersection.size() > 1
 				// if intersection is multiple, use it
 				role.setPreferredRoles( intersection );
-				leftRole.coalesceIfUnfixed( role );
-				rightRole.coalesceIfUnfixed( role );
+				role.setPreferredAUnion( false );
 			}
+
+			//leftRole.coalesceIfUnfixed( role );
+			//rightRole.coalesceIfUnfixed( role );
+			leftRole.coalesceIfPreferred( role );
+			rightRole.coalesceIfPreferred( role );
 		}
 
 		possibleUnfixedRoles.add( role );

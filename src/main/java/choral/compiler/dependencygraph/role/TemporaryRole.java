@@ -7,17 +7,20 @@ import java.util.Set;
 public class TemporaryRole extends Role {
 
 	private Role parent;
+	private Role parentIfPreferred;
 	private List<Role> possibleRoles;
 	private Set<Role> preferredRoles = Collections.emptySet();
+	private boolean isPreferredUnion = false;
 
 	@Override
 	public void coalesce( Role coalesceTo ){
 		assert parent == null;
-		if( this == coalesceTo.getCanonicalRole() ){
+		var role = coalesceTo.getCanonicalRole();
+		if( this == role ){
 			// coalescing a role to itself does nothing
 			return;
 		}
-		parent = coalesceTo;
+		parent = role;
 	}
 
 	@Override
@@ -26,14 +29,36 @@ public class TemporaryRole extends Role {
 	}
 
 	@Override
+	public void coalesceIfPreferred( Role coalesceTo ) {
+		if( this.isPreferredUnion ){
+			coalesce( coalesceTo );
+		}else{
+			assert parent == null;
+			parentIfPreferred = coalesceTo;
+		}
+	}
+
+	@Override
 	public Role getCanonicalRole() {
-		if( parent == null ){
+		if( parent != null ) {
+			Role fixedRole = parent.getCanonicalRole();
+			// Shortcut to the root, for future calls
+			parent = fixedRole;
+			return fixedRole;
+		}
+
+		if( parentIfPreferred == null ){
 			return this;
 		}
-		Role fixedRole = parent.getCanonicalRole();
-		// Shortcut to the root, for future calls
-		parent = fixedRole;
-		return fixedRole;
+
+		var maybeParent = parentIfPreferred.getCanonicalRole();
+		assert maybeParent.isFixed();
+		if( preferredRoles.contains( maybeParent ) ){
+			coalesce( maybeParent );
+		}else {
+			coalesce( preferredRoles.iterator().next() );
+		}
+		return getCanonicalRole();
 	}
 
 	@Override
@@ -74,6 +99,16 @@ public class TemporaryRole extends Role {
 	@Override
 	public void setPreferredRoles( Set<Role> roles ) {
 		this.preferredRoles = roles;
+	}
+
+	@Override
+	public boolean isPreferredAUnion() {
+		return this.isPreferredUnion;
+	}
+
+	@Override
+	public void setPreferredAUnion( boolean isUnion ) {
+		this.isPreferredUnion = isUnion;
 	}
 
 	@Override

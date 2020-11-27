@@ -29,7 +29,12 @@ public class FixedRole extends Role {
 
 	@Override
 	public void coalesceIfUnfixed( Role coalesceTo ) {
-		// no op
+		// no-op
+	}
+
+	@Override
+	public void coalesceIfPreferred( Role coalesceTo ) {
+		// no-op
 	}
 
 	@Override
@@ -54,6 +59,16 @@ public class FixedRole extends Role {
 
 	@Override
 	public void setPreferredRoles( Set<Role> roles ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean isPreferredAUnion() {
+		return false;
+	}
+
+	@Override
+	public void setPreferredAUnion( boolean isUnion ) {
 		throw new UnsupportedOperationException();
 	}
 

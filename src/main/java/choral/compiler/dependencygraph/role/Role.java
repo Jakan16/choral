@@ -55,6 +55,8 @@ public abstract class Role {
 
 	public abstract void coalesceIfUnfixed( Role coalesceTo );
 
+	public abstract void coalesceIfPreferred( Role coalesceTo );
+
 	/**
 	 * Weather the role have been fixed to an actual role, or is still to be fixed.
 	 * @return true if an actual role is assigned to this instance.
@@ -68,4 +70,8 @@ public abstract class Role {
 	public abstract Set<Role> getPreferredRoles();
 
 	public abstract void setPreferredRoles( Set<Role> roles );
+
+	public abstract boolean isPreferredAUnion();
+
+	public abstract void setPreferredAUnion( boolean isUnion );
 }
