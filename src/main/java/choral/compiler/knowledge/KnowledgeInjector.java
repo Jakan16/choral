@@ -10,6 +10,8 @@ import choral.ast.type.WorldArgument;
 import choral.ast.visitors.ChoralVisitor;
 import choral.compiler.Typer;
 import choral.compiler.dependencygraph.ComInjector;
+import choral.compiler.dependencygraph.Mapper;
+import choral.compiler.dependencygraph.role.Role;
 import choral.compiler.merge.MergeException;
 import choral.compiler.merge.StatementsMerger;
 import choral.compiler.soloist.StatementsProjector;
@@ -92,16 +94,19 @@ public class KnowledgeInjector extends ChoralVisitor {
 			if( n.condition() instanceof LiteralExpression.BooleanLiteralExpression ){
 				var con = ((LiteralExpression.BooleanLiteralExpression) n.condition());
 				if( con.getOriginalExpression() != null ){
-					final String roleName = selectRoles.iterator().next();
+					var rootRole = con.getOriginalExpression().getDependencies()
+							.getType().getRoles().get( 0 ).getCanonicalRole();
+					var conditionPref = rootRole.getPreferredRoles().stream()
+							.map( Role::getName ).filter( selectRoles::contains ).findAny();
+
+					final String roleName = conditionPref.orElseGet( () -> selectRoles.iterator().next() );
 					choosingRole = roleName;
 					// translate String to Role
-					var opRole = con.getOriginalExpression().getDependencies()
-							.getType().getRoles().get( 0 ).getPossibleRoles().stream()
+					var opRole = rootRole.getPossibleRoles().stream()
 							.filter( r -> r.getName().equals( roleName ) ).findAny();
 
 					// coalesce the role if any, otherwise rely on defaults.
-					opRole.ifPresent( role -> con.getOriginalExpression().getDependencies()
-							.getType().getRoles().get( 0 ).coalesce( role ) );
+					opRole.ifPresent( rootRole::coalesce );
 					// calculate communications for the new condition
 					condition = ComInjector.inject( con.getOriginalExpression() );
 					roleScopes.mark();
@@ -192,6 +197,12 @@ public class KnowledgeInjector extends ChoralVisitor {
 	private String getRole( Expression e ){
 		if( e instanceof MethodCallExpression ){
 			return ((GroundDataType) ((MethodCallExpression) e).methodAnnotation().get().returnType()).worldArguments().get( 0 ).identifier();
+		}
+		if( e instanceof EnclosedExpression ){
+			return getRole( ( (EnclosedExpression) e ).nestedExpression() );
+		}
+		if( e instanceof ClassInstantiationExpression ){
+			return ( (ClassInstantiationExpression) e ).typeExpression().worldArguments().get( 0 ).name().identifier();
 		}
 		return ((GroundDataType) e.typeAnnotation().get()).worldArguments().get( 0 ).identifier();
 

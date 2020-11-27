@@ -47,12 +47,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			if( dNode.getType().getRoles().size() == 1 ){
 				Role argRole = dNode.getType().getRoles().get( 0 ).getCanonicalRole();
 				Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
-				if( !argRole.isFixed() ){
-					argRole.coalesce( paramRole );
-					possibleUnfixedRoles.add( paramRole );
-				}else if( !paramRole.isFixed() ){
+				if( !paramRole.isFixed() ){
 					paramRole.coalesce( argRole );
 					possibleUnfixedRoles.add( argRole );
+				}else if( !argRole.isFixed() ){
+					argRole.coalesce( paramRole );
+					possibleUnfixedRoles.add( paramRole );
 				}
 			}
 			return dNode;
@@ -102,12 +102,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 					if( dNode.getType().getRoles().size() == 1 ){
 						Role argRole = dNode.getType().getRoles().get( 0 ).getCanonicalRole();
 						Role paramRole = type.getRoles().get( 0 ).getCanonicalRole();
-						if( !argRole.isFixed() ){
-							argRole.coalesce( paramRole );
-							possibleUnfixedRoles.add( paramRole );
-						}else if( !paramRole.isFixed() ){
+						if( !paramRole.isFixed() ){
 							paramRole.coalesce( argRole );
 							possibleUnfixedRoles.add( argRole );
+						}else if( !argRole.isFixed() ){
+							argRole.coalesce( paramRole );
+							possibleUnfixedRoles.add( paramRole );
 						}
 					}
 					return dNode;
@@ -218,8 +218,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 				role.setPreferredAUnion( false );
 			}
 
-			//leftRole.coalesceIfUnfixed( role );
-			//rightRole.coalesceIfUnfixed( role );
 			leftRole.coalesceIfPreferred( role );
 			rightRole.coalesceIfPreferred( role );
 		}
@@ -272,7 +270,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			role = role.getCanonicalRole();
 			// roles may have been fixed after being added to the set
 			if( !role.isFixed() ){
-				//role.coalesce( currentClass.worldParameters().get( 0 ) );
 				role.setPossibleRoles( currentClass.worldParameters() );
 			}
 		}

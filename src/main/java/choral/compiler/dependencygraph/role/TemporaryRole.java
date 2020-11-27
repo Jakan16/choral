@@ -31,6 +31,8 @@ public class TemporaryRole extends Role {
 	@Override
 	public void coalesceIfPreferred( Role coalesceTo ) {
 		if( this.isPreferredUnion ){
+			// any role may be used, if preferred is made as an union
+			// however the set may affect the parent, which this role is coalesced to.
 			coalesce( coalesceTo );
 		}else{
 			assert parent == null;
@@ -117,6 +119,6 @@ public class TemporaryRole extends Role {
 		if( canonical == this ){
 			return String.valueOf( getNumber() );
 		}
-		return canonical.toString();
+		return getNumber() + "->" + canonical.toString();
 	}
 }
