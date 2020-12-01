@@ -169,6 +169,9 @@ public abstract class Template {
 				}
 			}else{
 				Template def = importPackage.getTemplate( symbolPart );
+				if( def == null ){
+					throw new IllegalStateException("Cannot find symbol: " + symbolPart);
+				}
 				assert def.getName().equals( symbolPart );
 				knownSymbols.put( symbolPart, def );
 			}
