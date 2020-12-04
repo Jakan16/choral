@@ -57,7 +57,7 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 		GraphSolver.solve( root );
 
-		System.out.println( DependencyGraphPrinter.walk( root ) );
+		//System.out.println( DependencyGraphPrinter.walk( root ) );
 		return ComInjector.inject( cus );
 		/*System.out.println( DependencyGraphPrinter.walk( root ) );
 

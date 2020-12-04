@@ -44,7 +44,7 @@ public class UnknownTemplate extends Template {
 
 	@Override
 	public DVariable getField( String identifier ) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException(identifier);
 	}
 
 	@Override

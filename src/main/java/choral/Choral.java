@@ -178,9 +178,9 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 				annotatedUnits.set( KnowledgeInjector.inject( annotatedUnits.get(), headerUnits ) );
 				Typer.annotate( annotatedUnits.get(), headerUnits );
 
-				for( var cu: annotatedUnits.get() ){
-					System.out.println(new PrettyPrinterVisitor().visit( cu ) );
-				}
+				//for( var cu: annotatedUnits.get() ){
+				//	System.out.println(new PrettyPrinterVisitor().visit( cu ) );
+				//}
 
 				profilerLog( "projectability check", () -> Compiler.checkProjectiability( annotatedUnits.get() ) );
 

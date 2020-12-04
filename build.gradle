@@ -48,6 +48,7 @@ configurations {
 
 
 dependencies {
+	implementation 'junit:junit:4.12'
 	// choral dependencies
 	antlr "org.antlr:antlr4:4.5.3"
 	choral "org.apache.velocity:velocity:1.7"
@@ -65,6 +66,12 @@ dependencies {
 
 	// compare dependencies
 	compare 'com.typesafe.akka:akka-actor-typed_2.13:2.6.9'
+}
+
+test {
+	useJUnit()
+
+	maxHeapSize = '1G'
 }
 
 repositories {

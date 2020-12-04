@@ -99,7 +99,7 @@ public class KnowledgeInjector extends ChoralVisitor {
 					var conditionPref = rootRole.getPreferredRoles().stream()
 							.map( Role::getName ).filter( selectRoles::contains ).findAny();
 
-					final String roleName = conditionPref.orElseGet( () -> selectRoles.iterator().next() );
+					final String roleName = conditionPref.orElseGet( () -> selectRoles.iterator().hasNext() ? selectRoles.iterator().next() : rootRole.getPossibleRoles().get( 0 ).getName() );
 					choosingRole = roleName;
 					// translate String to Role
 					var opRole = rootRole.getPossibleRoles().stream()

@@ -1,6 +1,6 @@
 package knowledgeinjector;
 
-import org.choral.Choral;
+import choral.Choral;
 
 public class KnowledgeInjectorTest {
 
