@@ -26,8 +26,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class RuntimeCompiler {
+
+	public static final String A = "A";
+	public static final String B = "B";
+	public static final String C = "C";
+	public static final String D = "D";
+	public static final String E = "E";
+	public static final String F = "F";
 
 	private final String root;
 	private final String destinationFolder = "build/generatedFromChoral/java/";
@@ -35,13 +43,17 @@ public class RuntimeCompiler {
 	private final List< String > roles;
 	private List< Object > instantiations;
 
+	public static RuntimeCompiler compile( String src, String classPath, List< String > roles ) throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException, IOException {
+		return new RuntimeCompiler( src, classPath, roles ).compile();
+	}
+
 	public RuntimeCompiler( String src, String classPath, List< String > roles ) {
 		this.root = src;
 		this.classPath = classPath;
 		this.roles = roles;
 	}
 
-	public RuntimeCompiler compile() throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
+	private RuntimeCompiler compile() throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
 
 		String[] split = classPath.split( "\\." );
 		String dest = destinationFolder + split[split.length-1] + "/";
@@ -131,40 +143,12 @@ public class RuntimeCompiler {
 		return this;
 	}
 
-	public List< Object > invokeMethod( String methodName, Object[] ...args ) throws Throwable {
-		List< CompletableFuture< Object > > tasks = new ArrayList<>();
-		for( int i = 0, objectsSize = this.instantiations.size(); i < objectsSize; i++ ) {
-			final int index = i;
-			Object instantiation = this.instantiations.get( index );
+	public MethodCallBuilder method( String name ) {
+		return new MethodCallBuilder( name );
+	}
 
-			Method method;
-			if( args.length > 0 && args[ index ].length > 0 ) {
-				method = getMethodDeclaration( instantiation.getClass(), methodName, args[ index ] );
-			}else{
-				method = getMethodDeclaration( instantiation.getClass(), methodName );
-			}
-
-			tasks.add( CompletableFuture.supplyAsync( () -> {
-				try {
-					if( args.length == 0 ){
-						return method.invoke( instantiation );
-					}else{
-						assert args.length == this.instantiations.size();
-						return method.invoke( instantiation, args[index] );
-					}
-				} catch( InvocationTargetException e ) {
-					return new RoleException( "Error occurred at role " + this.roles.get( index ), e );
-				} catch( IllegalAccessException e ) {
-					return e;
-				}
-			} ) );
-		}
-
-		final List< Object > results = new ArrayList<>( tasks.size() );
-		for( CompletableFuture< Object > future : tasks ) {
-			results.add( future.get() );
-		}
-		return results;
+	public Result invokeMethod( String name ) throws NoSuchMethodException, ExecutionException, InterruptedException {
+		return new MethodCallBuilder( name ).invoke();
 	}
 
 	private static Method getMethodDeclaration(Class< ? > clazz, String methodName, Object[] args) throws NoSuchMethodException {
@@ -195,9 +179,6 @@ public class RuntimeCompiler {
 		builder.append( ')' );
 
 		throw new NoSuchMethodException( builder.toString() );
-	}
-	private static Method getMethodDeclaration(Class< ? > clazz, String methodName) throws NoSuchMethodException {
-		return clazz.getDeclaredMethod( methodName );
 	}
 
 	private static String className( String classPath, String role ) {
@@ -240,6 +221,83 @@ public class RuntimeCompiler {
 
 		public SymChannel_B< Object > getChannel_b() {
 			return channel_b;
+		}
+	}
+
+	public class MethodCallBuilder{
+		private final String methodName;
+		private final List< Object[] > args = new ArrayList<>( instantiations.size() );
+		private final Object[] emptyArray = new Object[0];
+
+		private MethodCallBuilder( String methodName ) {
+			this.methodName = methodName;
+			for( int i = 0; i < instantiations.size(); i++ ) {
+				args.add( emptyArray );
+			}
+		}
+
+		public MethodCallBuilder argAt( String role, Object[] arguments ){
+
+			int index = roles.indexOf( role );
+			assert args.get( index ) == emptyArray;
+			args.set( index, arguments );
+			return this;
+		}
+
+		public MethodCallBuilder argAt( String role, Object argument ){
+			return this.argAt( role, new Object[]{ argument } );
+		}
+
+		public MethodCallBuilder argAt( String role, List< Object > arguments ){
+			return this.argAt( role, arguments.toArray() );
+		}
+
+		public Result invoke() throws NoSuchMethodException, ExecutionException, InterruptedException {
+			List< CompletableFuture< Object > > tasks = new ArrayList<>();
+			for( int i = 0, objectsSize = instantiations.size(); i < objectsSize; i++ ) {
+				final int index = i;
+				Object instantiation = instantiations.get( index );
+				Method method = getMethodDeclaration( instantiation.getClass(), methodName, args.get( index ) );
+
+				tasks.add( CompletableFuture.supplyAsync( () -> {
+					try {
+						return method.invoke( instantiation, args.get( index ) );
+					} catch( InvocationTargetException e ) {
+						return new RoleException( "Error occurred at role " + roles.get( index ), e );
+					} catch( IllegalAccessException e ) {
+						return e;
+					}
+				} ) );
+			}
+
+			final List< Object > results = new ArrayList<>( tasks.size() );
+			for( CompletableFuture< Object > future : tasks ) {
+				results.add( future.get() );
+			}
+			return new Result( results );
+		}
+	}
+
+	public class Result{
+
+		private final List< Object > result;
+
+		private Result( List< Object > result ) {
+			this.result = result;
+		}
+
+		public List< Object > getResult() {
+			return result;
+		}
+
+		public Result assertNoErrors() throws Throwable {
+			Assert.assertNoErrors( result );
+			return this;
+		}
+
+		public Result assertEqualAt( String role, Object targetValue ) {
+			Assert.assertEqual( result, targetValue, roles.indexOf( role ) );
+			return this;
 		}
 	}
 }

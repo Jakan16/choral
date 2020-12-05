@@ -3,29 +3,39 @@ package compile;
 import org.junit.Test;
 import runtimecompiler.RuntimeCompiler;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-import static runtimecompiler.Assert.assertEqual;
-import static runtimecompiler.Assert.assertNoErrors;
+import static runtimecompiler.RuntimeCompiler.*;
 
 public class Programs {
-	
+
 	@Test
 	public void mergesort() throws Throwable {
-		RuntimeCompiler compiler = new RuntimeCompiler(
+
+		RuntimeCompiler instance = RuntimeCompiler.compile(
 				"src/tests/choral/tests/mergesort",
 				"Mergesort",
-				Arrays.asList( "A", "B", "C" )
-		).compile();
+				Arrays.asList( A, B, C )
+		);
 
-		//List< Object > results = compiler.invokeMethod( "sortTest" );
-		List< Integer > numbers = new ArrayList<>( Arrays.asList( -20, -4, 1, 3, 7, 7, 12, 33, 44, 56, 100, 85 ) );
-		List< Object > results = compiler.invokeMethod( "sort", new Object[]{numbers}, new Object[0], new Object[0] );
-		assertNoErrors( results );
+		Random random = new Random( 15 );
+		List< Integer > numbers = new ArrayList<>();
 
-		assertEqual( results, Arrays.asList( -20, -4, 1, 3, 7, 7, 12, 33, 44, 56, 85, 100 ), 0 );
+		for( int i = 0; i < 200; i++ ) {
+			numbers.add( i );
+		}
+
+		List< Integer > shuffled = new ArrayList<>( numbers );
+
+		for( int i = 0; i < 10; i++ ) {
+			Collections.shuffle( shuffled, random );
+
+			instance.method( "sort" )
+					.argAt( A, shuffled )
+					.invoke()
+					.assertNoErrors()
+					.assertEqualAt( A, numbers );
+		}
 	}
 
 }
