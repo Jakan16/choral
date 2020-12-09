@@ -10,12 +10,12 @@ import choral.ast.type.WorldArgument;
 import choral.ast.visitors.ChoralVisitor;
 import choral.compiler.Typer;
 import choral.compiler.dependencygraph.ComInjector;
-import choral.compiler.dependencygraph.Mapper;
 import choral.compiler.dependencygraph.role.Role;
 import choral.compiler.merge.MergeException;
 import choral.compiler.merge.StatementsMerger;
 import choral.compiler.soloist.StatementsProjector;
 import choral.types.GroundDataType;
+import choral.types.Member;
 import choral.types.World;
 
 import java.util.*;
@@ -84,8 +84,8 @@ public class KnowledgeInjector extends ChoralVisitor {
 			// set of roles that implement different behaviours in each branch.
 			Set< String > selectRoles =
 					Stream.concat(
-						ifRoles.roles().stream().filter( role -> !elseRoles.contains( role ) || !mergeable( role, n.ifBranch(), n.elseBranch() ) ),
-						elseRoles.roles().stream().filter( role -> !ifRoles.contains( role ) ) )
+						ifRoles.roles().stream().filter( role -> elseRoles.missing( role ) || !mergeable( role, n.ifBranch(), n.elseBranch() ) ),
+						elseRoles.roles().stream().filter( ifRoles::missing ) )
 					.collect(Collectors.toSet());
 
 			String choosingRole = getRole( n.condition() );
@@ -162,11 +162,13 @@ public class KnowledgeInjector extends ChoralVisitor {
 
 	@Override
 	public Node visit( MethodCallExpression n ) {
-		roleScopes.addRoles( n.methodAnnotation().get().higherCallable().declarationContext()
+		assert n.methodAnnotation().isPresent();
+		Member.GroundMethod methodAnnotation = n.methodAnnotation().get();
+		roleScopes.addRoles( methodAnnotation.higherCallable().declarationContext()
 				.worldArguments().stream().map( World::identifier )
 				.collect( Collectors.toList()) );
-		if( !n.methodAnnotation().get().returnType().isVoid() ){
-			roleScopes.addRoles( ((GroundDataType) n.methodAnnotation().get().returnType())
+		if( !methodAnnotation.returnType().isVoid() ){
+			roleScopes.addRoles( ((GroundDataType) methodAnnotation.returnType())
 					.worldArguments().stream().map( World::identifier )
 					.collect( Collectors.toList()) );
 		}
@@ -262,10 +264,6 @@ public class KnowledgeInjector extends ChoralVisitor {
 			scopes.add( new RoleScope() );
 		}
 
-		void addRole( String r ){
-			scopes.getFirst().addRole( r );
-		}
-
 		void addRoles( Collection< String > rs ){
 			scopes.getFirst().addRoles( rs );
 		}
@@ -297,19 +295,10 @@ public class KnowledgeInjector extends ChoralVisitor {
 
 	private static class RoleScope{
 		Set< String > roles;
-		boolean modified;
-		String owner;
-
-		RoleScope(String owner) {
-			this.roles = new HashSet<>();
-			this.modified = false;
-			this.owner = owner;
-		}
+		boolean modified = false;
 
 		RoleScope() {
 			this.roles = new HashSet<>();
-			this.modified = false;
-			this.owner = "";
 		}
 
 		void mark(){
@@ -324,19 +313,12 @@ public class KnowledgeInjector extends ChoralVisitor {
 			return roles;
 		}
 
-		void addRole( String r ){
-			if( !r.equals( owner ) ){
-				roles.add( r );
-			}
-		}
-
 		void addRoles( Collection< String > rs ){
 			roles.addAll( rs );
-			roles.remove( owner );
 		}
 
-		boolean contains( String role ){
-			return roles.contains( role );
+		boolean missing( String role ){
+			return !roles.contains( role );
 		}
 	}
 }

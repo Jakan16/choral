@@ -196,7 +196,10 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( ReturnStatement n ) {
-		DNode returnExp = n.returnExpression().accept( this );
+		DNode returnExp = null;
+		if( n.returnExpression() != null ) {
+			returnExp = n.returnExpression().accept( this );
+		}
 		// create explicit return node, as the return may be required to be at specific roles
 		DNode returnNode = new DReturn( returnExp, context.currentFrame().getReturnType() );
 		returnNode.setPosition( n.position() );

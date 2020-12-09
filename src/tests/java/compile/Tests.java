@@ -4,6 +4,7 @@ import org.junit.Test;
 import runtimecompiler.RuntimeCompiler;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static runtimecompiler.RuntimeCompiler.*;
 
@@ -45,5 +46,43 @@ public class Tests {
 				"If",
 				Arrays.asList( A, B, C )
 		).invokeMethod( "test" ).assertNoErrors();
+	}
+
+	@Test
+	public void packages() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/packages",
+				"Root",
+				Collections.singletonList( A )
+		).invokeMethod( "sum" ).assertNoErrors()
+		.assertEqualAt( A, 20 );
+	}
+
+	@Test
+	public void fieldAccess() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/fieldaccess",
+				"FieldAccess",
+				Collections.singletonList( A )
+		).invokeMethod( "sum" ).assertNoErrors()
+				.assertEqualAt( A, 27 );
+	}
+
+	@Test
+	public void autobox() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/autobox",
+				"AutoBoxing",
+				Arrays.asList( A, B )
+		).invokeMethod( "f" ).assertNoErrors();
+	}
+
+	@Test
+	public void generics() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/generic",
+				"Host",
+				Arrays.asList( A, B )
+		).invokeMethod( "test" ).assertNoErrors().assertEqualAt( A, "hello" );
 	}
 }

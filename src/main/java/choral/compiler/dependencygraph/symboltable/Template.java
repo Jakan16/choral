@@ -267,7 +267,7 @@ public abstract class Template {
 	 * @return a method signature
 	 */
 	public MethodSig getMethodSig( MethodCallExpression callExpression ){
-		return getMethodSig(callExpression.name().identifier(), callExpression.arguments().size());
+		return getMethodSig( callExpression.name().identifier(), callExpression.arguments().size() );
 	}
 
 	/**
@@ -276,7 +276,7 @@ public abstract class Template {
 	 * @return a method signature
 	 */
 	public MethodSig getMethodSig( MethodDefinition md ){
-		return getMethodSig(md.signature().name().identifier(), md.signature().parameters().size());
+		return getMethodSig( md.signature().name().identifier(), md.signature().parameters().size() );
 	}
 
 	/**

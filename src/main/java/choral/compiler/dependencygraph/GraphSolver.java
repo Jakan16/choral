@@ -119,6 +119,9 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 	@Override
 	public Void visit( DReturn n ) {
 		expressionRoot = false;
+		if( n.getReturnNode() == null ){
+			return null;
+		}
 		visit( n.getReturnNode() );
 		if( n.getReturnNode().getType().getRoles().size() == 1 ){
 			Role role = n.getReturnNode().getType().getRoles().get( 0 ).getCanonicalRole();

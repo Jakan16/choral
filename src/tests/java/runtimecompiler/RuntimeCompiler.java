@@ -101,7 +101,7 @@ public class RuntimeCompiler {
 		Channel[] channels = channels( numParam );
 
 		for( String role : this.roles ) {
-			Class< ? > cls = Class.forName( className( this.classPath, role ), true, classLoader );
+			Class< ? > cls = Class.forName( className( this.classPath, role, roles.size() == 1 ), true, classLoader );
 
 			Optional< Constructor< ? > > constructorOptional = Arrays.stream(
 					cls.getDeclaredConstructors() )
@@ -181,8 +181,12 @@ public class RuntimeCompiler {
 		throw new NoSuchMethodException( builder.toString() );
 	}
 
-	private static String className( String classPath, String role ) {
-		return classPath.replaceAll( "(\\|/)", "." ) + "_" + role;
+	private static String className( String classPath, String role, boolean onlyRole ) {
+		String className = classPath.replaceAll( "(\\|/)", "." );
+		if( onlyRole ) {
+			return className;
+		}
+		return className + "_" + role;
 	}
 
 	private static boolean deleteDirectory( File directoryToBeDeleted ) {
@@ -297,6 +301,17 @@ public class RuntimeCompiler {
 
 		public Result assertEqualAt( String role, Object targetValue ) {
 			Assert.assertEqual( result, targetValue, roles.indexOf( role ) );
+			return this;
+		}
+
+		public Result printResults(){
+			for( int i = 0; i < result.size(); i++ ) {
+				Object res = result.get( i );
+				if( res != Unit.id ){
+					System.out.println( "Role " + roles.get( i ) + " has result: " + res );
+				}
+			}
+
 			return this;
 		}
 	}

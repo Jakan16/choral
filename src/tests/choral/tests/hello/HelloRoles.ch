@@ -4,7 +4,7 @@ public class HelloRoles@( A, B ) {
 
     SymChannel@( A, B )< Object > ch_A_B;
 
-    public HelloRoles(SymChannel@( A, B )< Object > ch_A_B){
+    public HelloRoles( SymChannel@( A, B )< Object > ch_A_B ){
         this.ch_A_B = ch_A_B;
     }
 

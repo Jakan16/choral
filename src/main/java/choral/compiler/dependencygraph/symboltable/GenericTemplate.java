@@ -38,7 +38,18 @@ public class GenericTemplate extends Template {
 	@Override
 	public List< DType > prepareSuperType() {
 		if( parameter.upperBound().isEmpty() ){
-			return Collections.emptyList();
+			if( worldParameters().size() == 1 ){
+				// implicit extend Object
+				Template objectTem = getHoldingPackage().getRoot()
+						.getPackage( PackageHandler.langPath ).getTemplate( "Object" );
+
+				return Collections.singletonList(
+						new DType( objectTem,
+								Collections.singletonList( worldParameters().get( 0 ) ),
+								Collections.emptyList() ) );
+			}else{
+				return Collections.emptyList();
+			}
 		}
 		assert parameter.upperBound().size() == 1;
 		return Collections.singletonList( typeExpressionToDType( parameter.upperBound().get( 0 ) ) );

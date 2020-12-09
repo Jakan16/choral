@@ -62,6 +62,14 @@ public class ComInjector extends ChoralVisitor {
 
 		Expression exp = safeVisit( n.returnExpression() );
 
+		if( n.returnExpression() == null ){
+			return new ReturnStatement(
+					exp,
+					safeVisit( n.continuation() ),
+					n.position()
+			);
+		}
+
 		var targetType = n.getDependencies().getType();
 		var sourceType = n.returnExpression().getDependencies().getType();
 
