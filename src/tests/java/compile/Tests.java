@@ -85,4 +85,15 @@ public class Tests {
 				Arrays.asList( A, B )
 		).invokeMethod( "test" ).assertNoErrors().assertEqualAt( A, "hello" );
 	}
+
+	@Test
+	public void extension() throws Throwable {
+		RuntimeCompiler instance = RuntimeCompiler.compile(
+				"src/tests/choral/tests/extension",
+				"ExtensionClass",
+				Arrays.asList( A, B )
+		);
+		instance.invokeMethod( "getVal" ).assertNoErrors().assertEqualAt( B, "Text" );
+		instance.invokeMethod( "getValTwice" ).assertNoErrors().assertEqualAt( B, Arrays.asList( "Text", " ", "Text" ) );
+	}
 }

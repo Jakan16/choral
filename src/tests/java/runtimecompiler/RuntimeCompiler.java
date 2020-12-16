@@ -153,6 +153,7 @@ public class RuntimeCompiler {
 
 	private static Method getMethodDeclaration(Class< ? > clazz, String methodName, Object[] args) throws NoSuchMethodException {
 		Optional< Method > optionalMethod = Arrays.stream( clazz.getDeclaredMethods() )
+				.filter( m -> m.getName().equals( methodName ) )
 				.filter( m -> m.getParameterCount() == args.length )
 				.filter( m -> {
 					Class< ? >[] parameterTypes = m.getParameterTypes();
@@ -163,7 +164,10 @@ public class RuntimeCompiler {
 				} ).findAny();
 		if( optionalMethod.isPresent() ){
 			return optionalMethod.get();
+		}else if( clazz.getSuperclass() != null ){
+			return getMethodDeclaration( clazz.getSuperclass(), methodName, args );
 		}
+
 		StringBuilder builder = new StringBuilder();
 		builder.append( methodName ).append( '(' );
 
