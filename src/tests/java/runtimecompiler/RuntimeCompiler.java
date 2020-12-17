@@ -43,7 +43,7 @@ public class RuntimeCompiler {
 	private final List< String > roles;
 	private List< Object > instantiations;
 
-	public static RuntimeCompiler compile( String src, String classPath, List< String > roles ) throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException, IOException {
+	public static RuntimeCompiler compile( String src, String classPath, List< String > roles ) throws ClassNotFoundException, IOException, ExecutionException, InterruptedException {
 		return new RuntimeCompiler( src, classPath, roles ).compile();
 	}
 
@@ -53,7 +53,7 @@ public class RuntimeCompiler {
 		this.roles = roles;
 	}
 
-	private RuntimeCompiler compile() throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
+	private RuntimeCompiler compile() throws IOException, ClassNotFoundException, ExecutionException, InterruptedException {
 
 		String[] split = classPath.split( "\\." );
 		String dest = destinationFolder + split[split.length-1] + "/";
@@ -95,6 +95,7 @@ public class RuntimeCompiler {
 		SymChannel_B< Object > channel_b_a = new LocalChannel_B( ba, ab );
 
 		this.instantiations = new ArrayList<>();
+		List< CompletableFuture< ? > > instantiationsFutures = new ArrayList<>();
 
 		final int numParam = ( this.roles.size() * ( this.roles.size() - 1 ) ) / 2;
 
@@ -137,7 +138,19 @@ public class RuntimeCompiler {
 				}
 			}
 
-			this.instantiations.add( constructor.newInstance( roleChannels ) );
+			instantiationsFutures.add( CompletableFuture.supplyAsync( () -> {
+				try {
+					return constructor.newInstance( roleChannels );
+				} catch( InstantiationException | InvocationTargetException | IllegalAccessException e ) {
+					e.printStackTrace();
+				}
+				return null;
+			} ) );
+			//this.instantiations.add( constructor.newInstance( roleChannels ) );
+		}
+
+		for( CompletableFuture< ? > future: instantiationsFutures ){
+			this.instantiations.add( future.get() );
 		}
 
 		return this;

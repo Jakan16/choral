@@ -78,10 +78,10 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			assert n.getValue().getType().getRoles().size() == 1;
 			Role valueRole = n.getValue().getType().getRoles().get( 0 ).getCanonicalRole();
 			Role targetRole = n.getTarget().getType().getRoles().get( 0 ).getCanonicalRole();
-			if( !valueRole.isFixed() ){
-				valueRole.coalesce( targetRole );
-			}else if( !targetRole.isFixed() ){
+			if( !targetRole.isFixed() ){
 				targetRole.coalesce( valueRole );
+			}else if( !valueRole.isFixed() ){
+				valueRole.coalesce( targetRole );
 			}
 		}
 
