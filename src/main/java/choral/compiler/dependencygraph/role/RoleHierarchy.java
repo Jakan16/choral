@@ -75,7 +75,7 @@ public class RoleHierarchy {
 			visit( root, used, roleCountMap );
 			Optional< Role > opNext = roleSet.stream()
 					.filter( r -> !used.contains( r ) )
-					.max( ( o1, o2 ) -> Float.compare( roleCountMap.get( o2 ).score(), roleCountMap.get( o1 ).score() ) );
+					.max( ( o1, o2 ) -> Float.compare( roleCountMap.get( o1 ).score(), roleCountMap.get( o2 ).score() ) );
 			assert opNext.isPresent();
 			hierarchy.add( opNext.get() );
 			used.add( opNext.get() );
@@ -95,7 +95,9 @@ public class RoleHierarchy {
 			return;
 		}
 
-		count( node, roleCountMap );
+		if( node.role.getUnion().size() < node.size ){
+			count( node, roleCountMap );
+		}
 	}
 
 	private void count( Node node, Map< Role, Count > roleCountMap ){
@@ -105,6 +107,8 @@ public class RoleHierarchy {
 			node.role.getUnion().stream()
 					.map( roleCountMap::get )
 					.forEach( Count::addInternalCount );
+			count( node.left, roleCountMap );
+			count( node.right, roleCountMap );
 		}
 	}
 
@@ -112,9 +116,10 @@ public class RoleHierarchy {
 		compactTree( root );
 	}
 
-	private void compactTree( Node node ){
+	private int compactTree( Node node ){
 		if( node.left == null ){
-			return; // leaf
+			node.size = 1;
+			return 1; // leaf
 		}
 
 		if( node.role.getUnion().size() == 1 ){
@@ -122,7 +127,8 @@ public class RoleHierarchy {
 			node.left = null;
 			node.right = null;
 			node.role = node.role.getUnion().iterator().next();
-			return;
+			node.size = 1;
+			return 1;
 		}
 
 		if( node.left.role.getUnion().isEmpty() ){
@@ -130,21 +136,20 @@ public class RoleHierarchy {
 			node.role = node.right.role;
 			node.left = node.right.left;
 			node.right = node.right.right;
-			compactTree( node );
-			return;
+			node.size = compactTree( node );
+			return node.size;
 		}
 
 		if( node.right.role.getUnion().isEmpty() ){
 			// right is unbound and can be removed
 			node.role = node.left.role;
 			node.right = node.left.right;
-			node.left = node.left.left;
-			compactTree( node );
-			return;
+			node.size = compactTree( node );
+			return node.size;
 		}
 
-		compactTree( node.left );
-		compactTree( node.right );
+		node.size = compactTree( node.left ) + compactTree( node.right );
+		return node.size;
 	}
 
 	@Override
@@ -159,6 +164,7 @@ public class RoleHierarchy {
 		Role role;
 		Node left;
 		Node right;
+		int size;
 
 		Node getLeft(){
 			if( left == null ){
