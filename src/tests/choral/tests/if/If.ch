@@ -14,6 +14,25 @@ public class If@( A, B, C ) {
 
 	public void test() {
 		if(true){}
+		if(true){{}}
+		if(true){{{}}}
+		if(true){{}{}}
+
+		if(2@A > 3@B){
+            if(2@A > 3@B){
+                System@C.out.println(3@C);
+            }else{
+                System@C.out.println(3@C);
+            }
+            if(2@A > 3@B){
+                System@C.out.println(3@C);
+            }else{
+                System@C.out.println(3@C);
+            }
+        }else{
+            System@C.out.println(3@C);
+            System@C.out.println(3@C);
+        }
 
 		if(2@A > 3@B){
             System@C.out.println(2@A);
@@ -30,8 +49,8 @@ public class If@( A, B, C ) {
 		if(true){
 		    if(true){
 		        if(true){
-		            if(true){
-		                System.out.println("nested");
+		            if(true || false){
+		                System.out.println("nested"@B);
                 	}
             	}
         	}

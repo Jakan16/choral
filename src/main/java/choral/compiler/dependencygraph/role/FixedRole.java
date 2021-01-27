@@ -38,6 +38,11 @@ public class FixedRole extends Role {
 	}
 
 	@Override
+	public void coalesceHierarchical( Role role, RoleHierarchy roleHierarchy ) {
+		// no-op
+	}
+
+	@Override
 	public boolean isFixed() {
 		return true;
 	}
@@ -63,12 +68,37 @@ public class FixedRole extends Role {
 	}
 
 	@Override
+	public void setUnion( Set< Role > roles ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void setLeftUnion( Set< Role > roles ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void setRightUnion( Set< Role > roles ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Set< Role > getUnion() {
+		return Collections.singleton( this );
+	}
+
+	@Override
 	public boolean isPreferredAUnion() {
 		return false;
 	}
 
 	@Override
 	public void setPreferredAUnion( boolean isUnion ) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void hierarchyAlert( RoleHierarchy roleHierarchy ) {
 		throw new UnsupportedOperationException();
 	}
 

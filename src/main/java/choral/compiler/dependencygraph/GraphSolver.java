@@ -2,6 +2,7 @@ package choral.compiler.dependencygraph;
 
 import choral.compiler.dependencygraph.dnodes.*;
 import choral.compiler.dependencygraph.role.Role;
+import choral.compiler.dependencygraph.role.RoleHierarchy;
 import choral.compiler.dependencygraph.symboltable.Template;
 
 import java.util.HashSet;
@@ -152,10 +153,69 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 	@Override
 	public Void visit( DBinaryExpression n ) {
 		//minCom( n );
-		minComPreferred( n );
+		//minComPreferred( n );
+		hierarchy( n );
 		//moveRight( n );
 		//sendDirect( n );
 		return null;
+	}
+
+	private RoleHierarchy roleHierarchy;
+
+	private void hierarchy( DBinaryExpression n ){
+		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
+		boolean resetHierarchy = false;
+		if(roleHierarchy == null){
+			roleHierarchy = new RoleHierarchy();
+			resetHierarchy = true;
+			roleHierarchy.setRole( role );
+		}
+		expressionRoot = false;
+		roleHierarchy.goLeft();
+		visit( n.getLeft() );
+		roleHierarchy.goUp();
+		roleHierarchy.goRight();
+		visit( n.getRight() );
+		roleHierarchy.goUp();
+
+		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
+		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
+
+		roleHierarchy.setLeftRole( leftRole );
+		roleHierarchy.setRightRole( rightRole );
+
+		if( rightRole.getUnion().isEmpty() ) {
+			// right is not bound anywhere, bubble left
+			role.coalesce( leftRole );
+			rightRole.coalesce( leftRole );
+		} else if( leftRole.getUnion().isEmpty() ){
+			// left is not bound anywhere, bubble right
+			role.coalesce( rightRole );
+			leftRole.coalesce( rightRole );
+		}else{
+			if( resetHierarchy ){
+				role.hierarchyAlert( roleHierarchy );
+			}
+
+			var union = new HashSet<>( rightRole.getUnion() );
+			union.addAll( leftRole.getUnion() );
+			role.setUnion( union );
+			role.setLeftUnion( leftRole.getUnion() );
+			role.setRightUnion( rightRole.getUnion() );
+
+			if( union.size() == 1 ){
+				// if only one role in subtree, coalesce to it.
+				role.coalesce( union.iterator().next() );
+			}
+
+			leftRole.coalesceHierarchical( role, roleHierarchy );
+			rightRole.coalesceHierarchical( role, roleHierarchy );
+		}
+
+		possibleUnfixedRoles.add( role );
+		if( resetHierarchy ){
+			roleHierarchy = null;
+		}
 	}
 
 	private void minCom( DBinaryExpression n ){

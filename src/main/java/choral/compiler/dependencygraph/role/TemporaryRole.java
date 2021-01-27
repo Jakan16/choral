@@ -8,9 +8,14 @@ public class TemporaryRole extends Role {
 
 	private Role parent;
 	private Role parentIfPreferred;
-	private List<Role> possibleRoles;
-	private Set<Role> preferredRoles = Collections.emptySet();
+	private List< Role > possibleRoles;
+	private Set< Role > preferredRoles = Collections.emptySet();
+	private Set< Role > union = Collections.emptySet();
+	private Set< Role > leftUnion = Collections.emptySet();
+	private Set< Role > rightUnion = Collections.emptySet();
 	private boolean isPreferredUnion = false;
+	private RoleHierarchy roleHierarchy;
+	private boolean hierarchyAlert = false;
 
 	@Override
 	public void coalesce( Role coalesceTo ){
@@ -18,6 +23,12 @@ public class TemporaryRole extends Role {
 		var role = coalesceTo.getCanonicalRole();
 		if( this == role ){
 			// coalescing a role to itself does nothing
+			return;
+		}
+		if( hierarchyAlert ){
+			parentIfPreferred = coalesceTo;
+			roleHierarchy.setDominantRole( coalesceTo );
+			hierarchyAlert = false;
 			return;
 		}
 		parent = role;
@@ -41,6 +52,12 @@ public class TemporaryRole extends Role {
 	}
 
 	@Override
+	public void coalesceHierarchical( Role role, RoleHierarchy roleHierarchy ) {
+		this.roleHierarchy = roleHierarchy;
+		this.parentIfPreferred = role;
+	}
+
+	@Override
 	public Role getCanonicalRole() {
 		if( parent != null ) {
 			Role fixedRole = parent.getCanonicalRole();
@@ -55,10 +72,27 @@ public class TemporaryRole extends Role {
 
 		var maybeParent = parentIfPreferred.getCanonicalRole();
 		assert maybeParent.isFixed();
-		if( preferredRoles.contains( maybeParent ) ){
-			coalesce( maybeParent );
+
+		if( roleHierarchy != null ){
+			//if( preferredRoles.contains( maybeParent ) || union.isEmpty() ){
+			//if( union.isEmpty() || this.isPreferredUnion ){
+			if( union.isEmpty() ){
+				coalesce( maybeParent );
+			}else {
+				var leftHighest = roleHierarchy.getHighest( leftUnion );
+				var rightHighest = roleHierarchy.getHighest( rightUnion );
+				if( leftHighest == rightHighest ){
+					coalesce( leftHighest );
+				}else{
+					coalesce( maybeParent );
+				}
+			}
 		}else {
-			coalesce( preferredRoles.iterator().next() );
+			if( preferredRoles.contains( maybeParent ) ){
+				coalesce( maybeParent );
+			}else {
+				coalesce( preferredRoles.iterator().next() );
+			}
 		}
 		return getCanonicalRole();
 	}
@@ -104,6 +138,26 @@ public class TemporaryRole extends Role {
 	}
 
 	@Override
+	public void setUnion( Set< Role > roles ) {
+		this.union = roles;
+	}
+
+	@Override
+	public void setLeftUnion( Set< Role > roles ) {
+		this.leftUnion = roles;
+	}
+
+	@Override
+	public void setRightUnion( Set< Role > roles ) {
+		this.rightUnion = roles;
+	}
+
+	@Override
+	public Set< Role > getUnion() {
+		return this.union;
+	}
+
+	@Override
 	public boolean isPreferredAUnion() {
 		return this.isPreferredUnion;
 	}
@@ -111,6 +165,12 @@ public class TemporaryRole extends Role {
 	@Override
 	public void setPreferredAUnion( boolean isUnion ) {
 		this.isPreferredUnion = isUnion;
+	}
+
+	@Override
+	public void hierarchyAlert( RoleHierarchy roleHierarchy ) {
+		this.roleHierarchy = roleHierarchy;
+		this.hierarchyAlert = true;
 	}
 
 	@Override

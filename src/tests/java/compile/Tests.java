@@ -96,4 +96,13 @@ public class Tests {
 		instance.invokeMethod( "getVal" ).assertNoErrors().assertEqualAt( B, "Text" );
 		instance.invokeMethod( "getValTwice" ).assertNoErrors().assertEqualAt( B, Arrays.asList( "Text", " ", "Text" ) );
 	}
+
+	@Test
+	public void largeExpressionTree() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/large_expression_tree",
+				"LargeExpressionTree",
+				Arrays.asList( A, B, C, D )
+		).invokeMethod( "calc" ).assertNoErrors().assertEqualAt( A, 45 );
+	}
 }

@@ -1,6 +1,7 @@
 package choral.compiler.dependencygraph.role;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public abstract class Role {
@@ -57,21 +58,54 @@ public abstract class Role {
 
 	public abstract void coalesceIfPreferred( Role coalesceTo );
 
+	public abstract void coalesceHierarchical( Role role, RoleHierarchy roleHierarchy );
+
 	/**
 	 * Weather the role have been fixed to an actual role, or is still to be fixed.
 	 * @return true if an actual role is assigned to this instance.
 	 */
 	public abstract boolean isFixed();
 
-	public abstract void setPossibleRoles( List<Role> role );
+	public abstract void setPossibleRoles( List< Role > role );
 
-	public abstract List<Role> getPossibleRoles();
+	public abstract List< Role > getPossibleRoles();
 
-	public abstract Set<Role> getPreferredRoles();
+	public abstract Set< Role > getPreferredRoles();
 
-	public abstract void setPreferredRoles( Set<Role> roles );
+	public abstract void setPreferredRoles( Set< Role > roles );
+
+	public abstract void setUnion( Set< Role > roles );
+
+	public abstract void setLeftUnion( Set< Role > roles );
+
+	public abstract void setRightUnion( Set< Role > roles );
+
+	public abstract Set< Role > getUnion();
 
 	public abstract boolean isPreferredAUnion();
 
 	public abstract void setPreferredAUnion( boolean isUnion );
+
+	@Override
+	public boolean equals( Object o ) {
+		if( this == o ) return true;
+		if( o == null || getClass() != o.getClass() ) return false;
+		Role role = (Role) o;
+		return getCanonicalRole() == role.getCanonicalRole();
+	}
+
+	@Override
+	public int hashCode() {
+		var canonicalRole = getCanonicalRole();
+		if( this == canonicalRole ){
+			return super.hashCode();
+		}
+		return canonicalRole.hashCode();
+	}
+
+	/**
+	 * Next time the role is coalesced it won't, the role will instead be at the top of the roleHierarchy
+	 * @param roleHierarchy the hierarchy to put the role on top of
+	 */
+	public abstract void hierarchyAlert( RoleHierarchy roleHierarchy );
 }
