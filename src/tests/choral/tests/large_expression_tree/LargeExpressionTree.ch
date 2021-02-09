@@ -36,6 +36,7 @@ public class LargeExpressionTree@( A, B, C, D ){
 	    num4 = 1@A + 1 + 2@B;
 	    num4 = 1@A + 1 + 2@B + 2;
 	    num4 = (1@A + 1) + (2@B + 2);
+	    num4 = (1@D + 1@B) + (1@B + 1@C);
 	    return num;
 	}
 

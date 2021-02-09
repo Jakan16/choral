@@ -12,7 +12,8 @@ gradlew.bat
 src/main/java/choral/grammar/
 
 .idea/gradle.xml
-.idea/gradle.xml
 .idea/misc.xml
 gradle/wrapper/gradle-wrapper.jar
 gradle/wrapper/gradle-wrapper.properties
+
+src/tests/python/binarytreealgoanalyzer/generated/
