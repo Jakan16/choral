@@ -69,6 +69,9 @@ def distribution(start, end, input_file, ax, key):
 
     for i in range(len(occurences)):
         occurences[i] = sum(occurences[i:])/total
+
+    print(sum(occurences))
+
     occurences = occurences[start:end+1]
 
     ax.plot(list(range(start, end + 1)), occurences)
@@ -87,21 +90,57 @@ def min_max_occuring_value(input_files, key):
 
 fig, ax = plt.subplots()
 
+def plot_average(ax, input_files, key, x_values):
+    y_values = []
+    for input_file in input_files:
+        total = 0
+        sum = 0
+        for i in parse_file(input_file)[key]:
+            for j in i:
+                total += 1
+                sum += j
+        y_values.append(sum/total)
+    ax.plot(x_values, y_values)
+
 #### box plot
-#ax.set_xticklabels(input_files)
+#files = ['leaf_count_no_inner_pruning', 'inner_count_no_inner_pruning', 'ratio_no_inner_pruning', 'random_hierarchy',  'send_direct', 'optimal']
+#ticks = ['leaf count', 'inner count', 'ratio', 'random', 'direct', 'optimal']
+#files = ['leaf_count_no_inner_pruning', 'leaf_count_foresting_one_shot_no_inner_pruning', 'simple_leaf_count_foresting_no_inner_pruning', 'inner_count_no_inner_pruning', 'inner_count_foresting_one_shot_no_inner_pruning', 'inner_count_foresting_no_inner_pruning', 'ratio_no_inner_pruning', 'ratio_foresting_one_shot_no_inner_pruning', 'ratio_foresting_no_inner_pruning']
+#ticks = ['leaf', 'leaf f', 'leaf fi', 'inner', 'inner f', 'inner fi', 'ratio', 'ratio f', 'ratio fi']
+#files = ['inner_count_no_inner_pruning', 'inner_count', 'ratio_no_inner_pruning', 'ratio']
+#ticks = ['inner', 'inner ip', 'ratio', 'ratio ip']
+#files = ['leaf_count_no_inner_pruning', 'inner_count', 'inner_count_foresting', 'ratio', 'ratio_foresting']
+#ticks = ['leaf', 'inner ip', 'inner ip fi', 'ratio ip', 'ratio ip fi']
+#files = ['leaf_count_no_inner_pruning', 'leaf_count_pruning_5_foresting', 'leaf_count_pruning_0_foresting', 'ratio_foresting', 'ratio_pruning_5_foresting', 'ratio_pruning_0_foresting']
+#ticks = ['leaf p1', 'leaf p.5', 'leaf p0', 'ratio p1', 'ratio p.5', 'ratio p0']
+#ax.set_xticklabels(ticks)
 #ax.yaxis.grid(True)
-#boxplot_multiple_files(input_files, plt, 4)
+#boxplot_multiple_files(files, plt, 64)
 
 ### distribution
 
-files = ['ratio', 'ratio_foresting_one_shot', 'ratio_foresting']
+#files = ['ratio', 'ratio_foresting_one_shot', 'ratio_foresting', 'simple_leaf_count', 'leaf_count_foresting', 'foresting_leaf_count']
+files = ['send_direct', 'simple_leaf_count', 'leaf_pf_8_one_shot', 'leaf_pf_8', 'ratio_pf_8_one_shot', 'ratio_pf_8']
 key = 128
 min, max = min_max_occuring_value(files, key)
-min = 118
+min = 116
 for file in files:
     distribution(min, max, file, plt, key)
 
-plt.legend(files)
+#plt.legend(['ratio', 'ratio f', 'ratio fi', 'leaf', 'leaf f', 'leaf fi'])
+ax.yaxis.grid(True)
+plt.legend(['direct', 'simple leaf count', 'leaf f', 'leaf fi', 'ratio f', 'ratio fi'])
+
+### cost vs pf
+#files = ['leaf_pf_0', 'leaf_pf_1', 'leaf_pf_2', 'leaf_pf_3', 'leaf_pf_4', 'leaf_pf_5', 'leaf_pf_6', 'leaf_pf_7', 'leaf_pf_8', 'leaf_pf_9', 'leaf_pf_10']
+#plot_average(plt, files, 64, [i/10 for i in range(11)])
+#files = ['leaf_pf_1', 'leaf_pf_2', 'leaf_pf_3', 'leaf_pf_e', 'leaf_pf_4', 'leaf_pf_5', 'leaf_pf_6', 'leaf_pf_7', 'leaf_pf_8', 'leaf_pf_9', 'leaf_pf_99', 'leaf_pf_10']
+#plot_average(plt, files, 64, [0.1, 0.2, 0.3, 0.36787944117, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 1])
+#files = ['ratio_pf_1', 'ratio_pf_2', 'ratio_pf_3', 'ratio_pf_e', 'ratio_pf_4', 'ratio_pf_5', 'ratio_pf_6', 'ratio_pf_7', 'ratio_pf_8', 'ratio_pf_9', 'ratio_pf_99', 'ratio_pf_10']
+#plot_average(plt, files, 64, [0.1, 0.2, 0.3, 0.36787944117, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 1])
+#plt.legend(['leaf', 'ratio'])
+#ax.yaxis.grid(True)
+
 
 plt.show()
 
