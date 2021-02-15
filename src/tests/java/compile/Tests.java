@@ -105,4 +105,13 @@ public class Tests {
 				Arrays.asList( A, B, C, D )
 		).invokeMethod( "calc" ).assertNoErrors().assertEqualAt( A, 45 );
 	}
+
+	@Test
+	public void parenthesesExpressions() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/parentheses_expressions",
+				"ParenthesesExpressions",
+				Arrays.asList( A, B, C )
+		).invokeMethod( "run" ).assertNoErrors().assertEqualAt( A, 3 );
+	}
 }

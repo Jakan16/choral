@@ -101,6 +101,9 @@ public class StatementsUnitNormaliser extends AbstractChoralVisitor< Statement >
 		if( ExpressionUnitNormaliser.isNoop( e ) ) {
 			return visit( n.continuation() );
 		} else {
+			while( e instanceof EnclosedExpression ){
+				e = ( (EnclosedExpression) e ).nestedExpression();
+			}
 			return new ExpressionStatement( e, visit( n.continuation() ) ).copyPosition( n );
 		}
 	}
