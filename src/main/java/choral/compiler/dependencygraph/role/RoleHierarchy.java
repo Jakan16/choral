@@ -72,7 +72,7 @@ public class RoleHierarchy {
 				.forEach( r -> roleCountMap.put( r, new Count() ) );
 
 		while( roleCountMap.size() > 0 ){
-			visit( root, used, roleCountMap );
+			foresting( root, used, roleCountMap );
 			Optional< Role > opNext = roleSet.stream()
 					.filter( r -> !used.contains( r ) )
 					.max( ( o1, o2 ) -> Float.compare( roleCountMap.get( o1 ).score(), roleCountMap.get( o2 ).score() ) );
@@ -84,31 +84,40 @@ public class RoleHierarchy {
 		}
 	}
 
-	private void visit( Node node, Set< Role > used, Map< Role, Count > roleCountMap ){
+	private void foresting( Node node, Set< Role > used, Map< Role, Count > roleCountMap ){
 		if( node.left == null ){ // leaf
 			return;
 		}
 
 		if( !Collections.disjoint( node.role.getUnion(), used ) ){
-			visit( node.left, used, roleCountMap );
-			visit( node.right, used, roleCountMap );
+			foresting( node.left, used, roleCountMap );
+			foresting( node.right, used, roleCountMap );
 			return;
 		}
 
 		if( node.role.getUnion().size() < node.size ){
-			count( node, roleCountMap );
+			count( node, roleCountMap, defaultFactor );
 		}
 	}
 
-	private void count( Node node, Map< Role, Count > roleCountMap ){
+	private final static float pruningFactor = 0.8f;
+	private final static float defaultFactor = 1;
+
+	private void count( Node node, Map< Role, Count > roleCountMap, float leafValue ){
 		if( node.left == null ){ // leaf
-			roleCountMap.get( node.role ).addLeafCount();
+			roleCountMap.get( node.role ).addLeafCount( leafValue );
 		}else{
-			node.role.getUnion().stream()
-					.map( roleCountMap::get )
-					.forEach( Count::addInternalCount );
-			count( node.left, roleCountMap );
-			count( node.right, roleCountMap );
+			if(node.role.getUnion().size() < node.size){
+				node.role.getUnion().stream()
+						.map( roleCountMap::get )
+						.forEach( Count::addInternalCount );
+
+				count( node.left, roleCountMap, pruningFactor );
+				count( node.right, roleCountMap, pruningFactor );
+			}else{
+				count( node.left, roleCountMap, defaultFactor );
+				count( node.right, roleCountMap, defaultFactor );
+			}
 		}
 	}
 
@@ -184,11 +193,11 @@ public class RoleHierarchy {
 	}
 
 	private static class Count{
-		int leafCount;
-		int internalNodeCount;
+		float leafCount;
+		float internalNodeCount;
 
-		void addLeafCount(){
-			leafCount++;
+		void addLeafCount( float amount ){
+			leafCount += amount;
 		}
 
 		void addInternalCount(){
@@ -196,7 +205,16 @@ public class RoleHierarchy {
 		}
 
 		float score(){
-			return leafCount/(float) internalNodeCount;
+			return ratio();
+			// return leafCount();
+		}
+
+		float ratio(){
+			return leafCount/internalNodeCount;
+		}
+
+		float leafCount(){
+			return leafCount;
 		}
 
 		void reset(){
