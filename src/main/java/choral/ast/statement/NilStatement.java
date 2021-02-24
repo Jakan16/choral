@@ -50,7 +50,8 @@ public class NilStatement extends Statement {
 
 	@Override
 	public Statement cloneWithContinuation( Statement continuation ) {
-		return this;
+		//return this;
+		return continuation;
 	}
 
 	@Override

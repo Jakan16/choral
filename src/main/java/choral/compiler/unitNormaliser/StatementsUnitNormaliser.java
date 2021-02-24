@@ -74,6 +74,12 @@ public class StatementsUnitNormaliser extends AbstractChoralVisitor< Statement >
 			return enclosedStatement;
 		}
 
+		boolean aggressive = true;
+		if( aggressive ){
+			// unwrap all blocks
+			return enclosedStatement.cloneWithContinuation( continuation );
+		}
+
 		return new BlockStatement(
 				enclosedStatement,
 				continuation
