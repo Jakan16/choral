@@ -7,6 +7,12 @@ import choral.lang.Unit;
 import choral.runtime.LocalChannel.LocalChannel_A;
 import choral.runtime.LocalChannel.LocalChannel_B;
 import choral.runtime.Media.MessageQueue;
+import choral.runtime.busywaitchannel.BusyMessageQueue;
+import choral.runtime.busywaitchannel.BusyWaitChannel_A;
+import choral.runtime.busywaitchannel.BusyWaitChannel_B;
+import choral.runtime.delaychannel.DelayChannel_A;
+import choral.runtime.delaychannel.DelayChannel_B;
+import choral.runtime.delaychannel.DelayMessageQueue;
 import picocli.CommandLine;
 
 import javax.tools.JavaCompiler;
@@ -27,6 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class RuntimeCompiler {
 
@@ -42,6 +50,8 @@ public class RuntimeCompiler {
 	private final String classPath;
 	private final List< String > roles;
 	private List< Object > instantiations;
+
+	private final static ExecutorService executor = Executors.newFixedThreadPool( 8 );
 
 	public static RuntimeCompiler compile( String src, String classPath, List< String > roles ) throws ClassNotFoundException, IOException, ExecutionException, InterruptedException {
 		return new RuntimeCompiler( src, classPath, roles ).compile();
@@ -146,7 +156,6 @@ public class RuntimeCompiler {
 				}
 				return null;
 			} ) );
-			//this.instantiations.add( constructor.newInstance( roleChannels ) );
 		}
 
 		for( CompletableFuture< ? > future: instantiationsFutures ){
@@ -219,7 +228,7 @@ public class RuntimeCompiler {
 	private static Channel[] channels( int count ) {
 		List< Channel > channels = new ArrayList<>( count );
 		for( int i = 0; i < count; i++ ) {
-			channels.add( new Channel() );
+			channels.add( new Channel( Channel.busyWait ) );
 		}
 		return channels.toArray( Channel[]::new );
 	}
@@ -234,6 +243,34 @@ public class RuntimeCompiler {
 
 			this.channel_a = new LocalChannel_A( ab, ba );
 			this.channel_b = new LocalChannel_B( ba, ab );
+		}
+
+		static int queue = 0;
+		static int busyWait = 1;
+		static int delayed = 2;
+
+		Channel( int channelType ) {
+			if( channelType == busyWait ){
+				BusyMessageQueue ab = new BusyMessageQueue(16384);
+				BusyMessageQueue ba = new BusyMessageQueue(16384);
+
+				this.channel_a = new BusyWaitChannel_A( ab, ba );
+				this.channel_b = new BusyWaitChannel_B( ba, ab );
+			}else if ( channelType == queue ){
+				MessageQueue ab = new MessageQueue();
+				MessageQueue ba = new MessageQueue();
+
+				this.channel_a = new LocalChannel_A( ab, ba );
+				this.channel_b = new LocalChannel_B( ba, ab );
+			}else if( channelType == delayed ){
+				DelayMessageQueue ab = new DelayMessageQueue(16384, 5 * 1000000);
+				DelayMessageQueue ba = new DelayMessageQueue(16384, 5 * 1000000);
+
+				this.channel_a = new DelayChannel_A( ab, ba );
+				this.channel_b = new DelayChannel_B( ba, ab );
+			}else {
+				throw new IllegalArgumentException( "Unknown channel type" );
+			}
 		}
 
 		public SymChannel_A< Object > getChannel_a() {
@@ -275,6 +312,7 @@ public class RuntimeCompiler {
 
 		public Result invoke() throws NoSuchMethodException, ExecutionException, InterruptedException {
 			List< CompletableFuture< Object > > tasks = new ArrayList<>();
+			final long[] executionTime = new long[instantiations.size()];
 			for( int i = 0, objectsSize = instantiations.size(); i < objectsSize; i++ ) {
 				final int index = i;
 				Object instantiation = instantiations.get( index );
@@ -282,29 +320,35 @@ public class RuntimeCompiler {
 
 				tasks.add( CompletableFuture.supplyAsync( () -> {
 					try {
-						return method.invoke( instantiation, args.get( index ) );
+						long startTime = System.nanoTime();
+						Object res = method.invoke( instantiation, args.get( index ) );
+						long duration = System.nanoTime() - startTime;
+						executionTime[index] = duration;
+						return res;
 					} catch( InvocationTargetException e ) {
 						return new RoleException( "Error occurred at role " + roles.get( index ), e );
 					} catch( IllegalAccessException e ) {
 						return e;
 					}
-				} ) );
+				}, executor ) );
 			}
 
 			final List< Object > results = new ArrayList<>( tasks.size() );
 			for( CompletableFuture< Object > future : tasks ) {
 				results.add( future.get() );
 			}
-			return new Result( results );
+			return new Result( results, executionTime );
 		}
 	}
 
 	public class Result{
 
 		private final List< Object > result;
+		private final long[] executionTime;
 
-		private Result( List< Object > result ) {
+		private Result( List< Object > result, long[] executionTime ) {
 			this.result = result;
+			this.executionTime = executionTime;
 		}
 
 		public List< Object > getResult() {
@@ -321,11 +365,15 @@ public class RuntimeCompiler {
 			return this;
 		}
 
+		public long[] getExecutionTime() {
+			return executionTime;
+		}
+
 		public Result printResults(){
 			for( int i = 0; i < result.size(); i++ ) {
 				Object res = result.get( i );
 				if( res != Unit.id ){
-					System.out.println( "Role " + roles.get( i ) + " has result: " + res );
+					System.out.println( "Role " + roles.get( i ) + " completed in " + executionTime[i]/1000000 + "ms with result: " + res );
 				}
 			}
 

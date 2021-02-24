@@ -1247,7 +1247,7 @@ public class Typer {
 				for( Pair< VariableDeclaration, Statement > c : n.catches() ) {
 					GroundDataType te = visitGroundDataTypeExpression( scope, c.left().type(),
 							false );
-					if( te.worldArguments().size() > 1 ||
+					/*if( te.worldArguments().size() > 1 ||
 							te.isSubtypeOf(
 									universe().specialType( SpecialTypeTag.EXCEPTION ).applyTo(
 											te.worldArguments() ) )
@@ -1256,7 +1256,7 @@ public class Typer {
 								new StaticVerificationException( "required an instance of type '"
 										+ SpecialTypeTag.EXCEPTION
 										+ "' required, found '" + te + "'" ) );
-					}
+					}*/
 
 					openBlock();  // ---
 					try {

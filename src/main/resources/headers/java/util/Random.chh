@@ -1,0 +1,13 @@
+
+package java.util;
+
+public final class Random@A {
+
+    public Random();
+
+    public Random( long@A seed );
+
+    public int@A nextInt();
+
+    public int@A nextInt( int@A bound );
+}

@@ -71,16 +71,26 @@ public class RoleHierarchy {
 				.filter( r -> !used.contains( r ) )
 				.forEach( r -> roleCountMap.put( r, new Count() ) );
 
-		while( roleCountMap.size() > 0 ){
-			foresting( root, used, roleCountMap );
-			Optional< Role > opNext = roleSet.stream()
+		boolean oneshot = true;
+		if( oneshot ){
+			leafCount( root, roleCountMap );
+			roleSet.stream()
 					.filter( r -> !used.contains( r ) )
-					.max( ( o1, o2 ) -> Float.compare( roleCountMap.get( o1 ).score(), roleCountMap.get( o2 ).score() ) );
-			assert opNext.isPresent();
-			hierarchy.add( opNext.get() );
-			used.add( opNext.get() );
-			roleCountMap.remove( opNext.get() );
-			roleCountMap.values().forEach( Count::reset );
+					.sorted( ( o1, o2 ) -> Float.compare( roleCountMap.get( o1 ).score(), roleCountMap.get( o2 ).score() ) )
+					.forEach( hierarchy::add );
+		}else {
+			while( roleCountMap.size() > 0 ) {
+				foresting( root, used, roleCountMap );
+				Optional< Role > opNext = roleSet.stream()
+						.filter( r -> !used.contains( r ) )
+						.max( ( o1, o2 ) -> Float.compare( roleCountMap.get( o1 ).score(),
+								roleCountMap.get( o2 ).score() ) );
+				assert opNext.isPresent();
+				hierarchy.add( opNext.get() );
+				used.add( opNext.get() );
+				roleCountMap.remove( opNext.get() );
+				roleCountMap.values().forEach( Count::reset );
+			}
 		}
 	}
 
@@ -118,6 +128,18 @@ public class RoleHierarchy {
 				count( node.left, roleCountMap, defaultFactor );
 				count( node.right, roleCountMap, defaultFactor );
 			}
+		}
+	}
+
+	private void leafCount( Node node, Map< Role, Count > roleCountMap ){
+		if( node.left == null ){ // leaf
+			var count = roleCountMap.get( node.role );
+			if ( count != null ){
+				count.addLeafCount( defaultFactor );
+			}
+		}else{
+			leafCount( node.left, roleCountMap );
+			leafCount( node.right, roleCountMap );
 		}
 	}
 
@@ -205,8 +227,8 @@ public class RoleHierarchy {
 		}
 
 		float score(){
-			return ratio();
-			// return leafCount();
+			//return ratio();
+			return leafCount();
 		}
 
 		float ratio(){

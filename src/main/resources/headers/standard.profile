@@ -20,6 +20,7 @@ java/lang/Short.chh
 java/lang/String.chh
 java/lang/System.chh
 java/lang/Throwable.chh
+java/lang/Thread.chh
 java/nio/ByteBuffer.chh
 java/nio/charset/StandardCharsets.chh
 java/nio/charset/Charset.chh
@@ -28,6 +29,7 @@ java/security/NoSuchAlgorithmException.chh
 java/util/ArrayList.chh
 java/util/Iterator.chh
 java/util/List.chh
+java/util/Random.chh
 java/util/function/Consumer.chh
 java/util/function/Function.chh
 choral/channels/BiChannel.chh

@@ -20,6 +20,7 @@ import choral.compiler.dependencygraph.role.TemporaryRole;
 import choral.compiler.dependencygraph.symboltable.PackageHandler;
 import choral.compiler.dependencygraph.symboltable.SymbolTable;
 import choral.compiler.dependencygraph.symboltable.Template;
+import choral.utils.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -186,7 +187,15 @@ public class DependencyGraph implements ChoralVisitorInterface< DNode > {
 
 	@Override
 	public DNode visit( TryCatchStatement n ) {
-		throw new UnsupportedOperationException();
+		context.enterScope();
+		DNode dNode = n.body().accept( this );
+		context.exitScope();
+		for( Pair<VariableDeclaration, Statement> pair: n.catches() ){
+			context.enterScope();
+			dNode = dNode.merge( pair.left().accept( this ) ).merge( pair.right().accept( this ) );
+			context.exitScope();
+		}
+		return dNode.merge( n.continuation().accept( this ) );
 	}
 
 	@Override

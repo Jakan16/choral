@@ -13,4 +13,6 @@ public class Exception@A extends Throwable@A {
 
     public Exception(Throwable@A cause) {  }
 
+    public void printStackTrace(){}
+
 }

@@ -17,3 +17,4 @@ gradle/wrapper/gradle-wrapper.jar
 gradle/wrapper/gradle-wrapper.properties
 
 src/tests/python/binarytreealgoanalyzer/generated/
+src/tests/python/binarytreealgoanalyzer/execution_times/

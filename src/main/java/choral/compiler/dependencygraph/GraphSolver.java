@@ -307,8 +307,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
 		Role leftRole = n.getLeft().getType().getRoles().get( 0 ).getCanonicalRole();
 
-		rightRole.coalesceIfUnfixed( role );
-		leftRole.coalesceIfUnfixed( role );
+		if( leftRole == rightRole ){ // both fixed at the same role
+			role.coalesce( leftRole );
+		}else{
+			rightRole.coalesceIfUnfixed( role );
+			leftRole.coalesceIfUnfixed( role );
+		}
 	}
 
 	@Override

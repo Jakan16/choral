@@ -1,0 +1,11 @@
+package java.lang;
+
+import java.io.Serializable;
+
+public final class Thread@A {
+
+    public static void sleep( long@A millis );
+
+    public static void sleep( long@A millis, int@A nanos );
+
+}
