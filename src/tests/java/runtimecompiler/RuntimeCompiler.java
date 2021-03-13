@@ -251,8 +251,8 @@ public class RuntimeCompiler {
 
 		Channel( int channelType ) {
 			if( channelType == busyWait ){
-				BusyMessageQueue ab = new BusyMessageQueue(16384);
-				BusyMessageQueue ba = new BusyMessageQueue(16384);
+				BusyMessageQueue ab = new BusyMessageQueue(16384*4);
+				BusyMessageQueue ba = new BusyMessageQueue(16384*4);
 
 				this.channel_a = new BusyWaitChannel_A( ab, ba );
 				this.channel_b = new BusyWaitChannel_B( ba, ab );
@@ -263,8 +263,8 @@ public class RuntimeCompiler {
 				this.channel_a = new LocalChannel_A( ab, ba );
 				this.channel_b = new LocalChannel_B( ba, ab );
 			}else if( channelType == delayed ){
-				DelayMessageQueue ab = new DelayMessageQueue(16384, 5 * 1000000);
-				DelayMessageQueue ba = new DelayMessageQueue(16384, 5 * 1000000);
+				DelayMessageQueue ab = new DelayMessageQueue(16384, 100 * 1000000, 100 * 1000000);
+				DelayMessageQueue ba = new DelayMessageQueue(16384, 100 * 1000000, 100 * 1000000);
 
 				this.channel_a = new DelayChannel_A( ab, ba );
 				this.channel_b = new DelayChannel_B( ba, ab );
@@ -320,6 +320,8 @@ public class RuntimeCompiler {
 
 				tasks.add( CompletableFuture.supplyAsync( () -> {
 					try {
+						long last = System.nanoTime() & 67108864;
+						while( ( System.nanoTime() & 67108864 ) == last );
 						long startTime = System.nanoTime();
 						Object res = method.invoke( instantiation, args.get( index ) );
 						long duration = System.nanoTime() - startTime;

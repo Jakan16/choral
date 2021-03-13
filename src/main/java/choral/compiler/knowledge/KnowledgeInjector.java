@@ -17,6 +17,7 @@ import choral.compiler.soloist.StatementsProjector;
 import choral.types.GroundDataType;
 import choral.types.Member;
 import choral.types.World;
+import choral.utils.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -116,15 +117,42 @@ public class KnowledgeInjector extends ChoralVisitor {
 			// the role calculating the guard, does not have to inform itself
 			selectRoles.remove( choosingRole );
 
-			for( String role : selectRoles ) {
-				String channel = getChannel( role, choosingRole );
-				ifBranch   = createSelectStatement( channel, choosingRole, L, ifBranch );
-				elseBranch = createSelectStatement( channel, choosingRole, R, elseBranch );
-			}
-
 			if( selectRoles.size() > 0 ){
 				roleScopes.mark();
 			}
+
+			List< Pair< String, String > > pairs = PropagationTree.solve( 100, 1, choosingRole, selectRoles );
+
+			for( Pair< String, String > pair: pairs ){
+				String channel = getChannel( pair.right(), pair.left() );
+				ifBranch   = createSelectStatement( channel, pair.left(), L, ifBranch );
+				elseBranch = createSelectStatement( channel, pair.left(), R, elseBranch );
+			}
+
+			/*
+			Stack< Pair< String, String > > rolePairStack = new Stack<>();
+
+			//int fanOut = Integer.MAX_VALUE;
+			int fanOut = 4;
+			int nextToSend = 0;
+			String informer = choosingRole;
+			List<String> selectList = new ArrayList<>( selectRoles );
+
+			for( int i = 0; i < selectList.size(); i++ ) {
+				if( i % fanOut == 0 && i > 0 ){
+					informer = selectList.get( nextToSend );
+					nextToSend++;
+				}
+
+				rolePairStack.push( Pair.of( selectList.get( i ), informer ) );
+			}
+
+			while( !rolePairStack.empty() ) {
+				Pair< String, String > pair = rolePairStack.pop();
+				String channel = getChannel( pair.left(), pair.right() );
+				ifBranch   = createSelectStatement( channel, pair.right(), L, ifBranch );
+				elseBranch = createSelectStatement( channel, pair.right(), R, elseBranch );
+			}*/
 		}
 
 		return new IfStatement(

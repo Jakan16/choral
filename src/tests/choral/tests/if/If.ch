@@ -18,6 +18,21 @@ public class If@( A, B, C ) {
 		if(true){{{}}}
 		if(true){{}{}}
 
+		if(true@A){
+		    System@B.out.println(1);
+		    System@C.out.println(1);
+		}
+
+		if(true@A){
+            if(true@A){
+                System@B.out.println(1@A);
+            }else{
+                System@B.out.println(2@A);
+            }
+        }else{
+            System@B.out.println(3@A);
+        }
+
 		if(2@A > 3@B){
             if(2@A > 3@B){
                 System@C.out.println(3@C);

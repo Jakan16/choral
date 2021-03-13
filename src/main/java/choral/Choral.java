@@ -156,7 +156,7 @@ public class Choral extends ChoralCommand implements Callable< Integer > {
 						.collect( Collectors.toList() );
 				Collection< CompilationUnit > sourceUnits = sourceFiles.stream().map(
 						wrapFunction( Parser::parseSourceFile ) ).collect( Collectors.toList() );
-				sourceUnits.add( Parser.parseSourceFile( Thread.currentThread().getContextClassLoader().getResourceAsStream( "choice/Choice.ch" ), "Choice.ch" ) );
+				sourceUnits.add( Parser.parseSourceFile( Thread.currentThread().getContextClassLoader().getResourceAsStream( "headers/choral/choice/Choice.ch" ), "Choice.ch" ) );
 				Collection< CompilationUnit > headerUnits = Stream.concat(
 						HeaderLoader.loadStandardProfile(),
 						HeaderLoader.loadFromPath(

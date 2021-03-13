@@ -12,8 +12,8 @@ public class DelayedChannelTest {
 	@Test
 	public void stressTest() throws InterruptedException {
 
-		DelayMessageQueue ab = new DelayMessageQueue(1024, 1000);
-		DelayMessageQueue ba = new DelayMessageQueue(1024, 1000);
+		DelayMessageQueue ab = new DelayMessageQueue(1024, 1000, 0);
+		DelayMessageQueue ba = new DelayMessageQueue(1024, 1000, 0);
 
 		SymChannel_A< Object > channel_a = new DelayChannel_A( ab, ba );
 		SymChannel_B< Object > channel_b = new DelayChannel_B( ba, ab );
@@ -41,8 +41,8 @@ public class DelayedChannelTest {
 
 	@Test
 	public void simpleTimeTest(){
-		DelayMessageQueue ab = new DelayMessageQueue(5, 10000000000L); // 10 secs
-		DelayMessageQueue ba = new DelayMessageQueue(5, 10000000000L); // 10 secs
+		DelayMessageQueue ab = new DelayMessageQueue(5, 5000000000L, 5000000000L); // 10 secs
+		DelayMessageQueue ba = new DelayMessageQueue(5, 5000000000L, 5000000000L); // 10 secs
 
 		SymChannel_A< Object > channel_a = new DelayChannel_A( ab, ba );
 		SymChannel_B< Object > channel_b = new DelayChannel_B( ba, ab );
@@ -55,8 +55,8 @@ public class DelayedChannelTest {
 
 	@Test
 	public void timeTest() throws InterruptedException {
-		DelayMessageQueue ab = new DelayMessageQueue(2, 1000000000L); // 1 sec
-		DelayMessageQueue ba = new DelayMessageQueue(2, 1000000000L); // 1 sec
+		DelayMessageQueue ab = new DelayMessageQueue(2, 1000000000L,0); // 1 sec
+		DelayMessageQueue ba = new DelayMessageQueue(2, 1000000000L,0); // 1 sec
 
 		SymChannel_A< Object > channel_a = new DelayChannel_A( ab, ba );
 		SymChannel_B< Object > channel_b = new DelayChannel_B( ba, ab );

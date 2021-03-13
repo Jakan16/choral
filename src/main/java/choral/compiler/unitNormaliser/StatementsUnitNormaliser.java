@@ -70,6 +70,7 @@ public class StatementsUnitNormaliser extends AbstractChoralVisitor< Statement >
 		// The block statement may itself be a continuation, which will change the scoping.
 		// This does not matter however,
 		// because any declared variable cannot be used in the continuation, as there aren't any.
+		// the above is not true, as the block may redeclare variables from another scope.
 		if( continuation instanceof NilStatement ){
 			return enclosedStatement;
 		}
