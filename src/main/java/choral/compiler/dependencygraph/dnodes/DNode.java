@@ -5,7 +5,7 @@ import choral.ast.Position;
 import java.util.Collections;
 
 /**
- * Base class for dependency graph notes
+ * Base class for dependency graph nodes
  */
 public abstract class DNode {
 

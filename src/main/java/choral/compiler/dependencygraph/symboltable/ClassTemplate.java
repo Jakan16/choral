@@ -10,6 +10,7 @@ import choral.compiler.dependencygraph.dnodes.DType;
 import choral.compiler.dependencygraph.role.FixedRole;
 import choral.compiler.dependencygraph.role.Role;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,23 +30,31 @@ public class ClassTemplate extends Template {
 
 	@Override
 	public List< DType > prepareSuperType(){
+
+		List< DType > extensions = new ArrayList<>();
+
 		if( classNode.extendsClass() != null ){
-			return Collections.singletonList( typeExpressionToDType( classNode.extendsClass() ) );
+			extensions.add( typeExpressionToDType( classNode.extendsClass() ) );
 		}
 
-		if( classNode.worldParameters().size() == 1 ){
+		if( classNode.implementsInterfaces().size() > 0 ){
+			extensions.addAll( typeExpressionsToDTypes( classNode.implementsInterfaces() ) );
+		}
+
+		// multi roled objects does not extend Object,
+		// if other extension are available, Object is retrieved through them too
+		if( classNode.worldParameters().size() == 1 && extensions.isEmpty() ){
 			// If nothing else is extended, Object is implicit
 			Template objectTem = getHoldingPackage().getRoot().getPackage( PackageHandler.langPath )
 					.getTemplate( "Object" );
 			if( objectTem != this ) { // Object cannot extend itself
-				return Collections.singletonList(
+				extensions.add(
 						new DType( objectTem,
 								Collections.singletonList( worldParameters().get( 0 ) ),
 								Collections.emptyList() ) );
 			}
 		}
-
-		return Collections.emptyList();
+		return extensions;
 	}
 
 	@Override

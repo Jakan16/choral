@@ -35,7 +35,6 @@ public class Mergesort@( A, B, C ){
 		if( lhs.size() > 0 ) {
 			if( rhs.size() > 0 ){
 				ArrayList< Integer > result = new ArrayList< Integer >();
-				result.toString();
 				if( lhs.get( 0 ) <= rhs.get( 0 ) ){
 					lhs.get( 0 ) >> result::add;
 					merge( lhs.subList( 1, lhs.size() ), rhs ) >> result::addAll;

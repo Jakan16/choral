@@ -32,7 +32,7 @@ public class InterfaceTemplate extends Template {
 			return typeExpressionsToDTypes( interfaceNode.extendsInterfaces() );
 		}
 
-		if( interfaceNode.worldParameters().size() == 1 ){
+		if( interfaceNode.worldParameters().size() == 1 ){ // multi roled objects does not extend Object
 			// If nothing else is extended, Object is implicit
 			Template objectTem = getHoldingPackage().getRoot().getPackage( PackageHandler.langPath )
 					.getTemplate( "Object" );

@@ -114,4 +114,13 @@ public class Tests {
 				Arrays.asList( A, B, C )
 		).invokeMethod( "run" ).assertNoErrors().assertEqualAt( A, 3 );
 	}
+
+	@Test
+	public void AbstractClass() throws Throwable {
+		RuntimeCompiler.compile(
+				"src/tests/choral/tests/abstract_class",
+				"Main",
+				Collections.singletonList( C )
+		).invokeMethod( "run" ).assertNoErrors().assertEqualAt( C, 42 + 24 );
+	}
 }
