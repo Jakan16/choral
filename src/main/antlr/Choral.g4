@@ -438,6 +438,7 @@ primary
 	:	literal AT worldArgument
 	|   literal
 	|	NULL worldArguments
+	|   NULL
 	|	THIS
     |   SUPER
 	|	LPAREN expression RPAREN
@@ -464,7 +465,6 @@ fieldAccess_no_primary
 argumentList
 	: expression ( COMMA expression )*
 	| literal AT LBRACK worldArgumentList RBRACK
-	| literal
 	;
 
 ifThenStatement

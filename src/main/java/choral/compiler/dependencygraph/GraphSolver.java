@@ -12,7 +12,6 @@ import java.util.Set;
 public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	private Template currentClass;
-	private boolean expressionRoot = true;
 	private final Set< Role > possibleUnfixedRoles = new HashSet<>();
 
 	public static DRoot solve( DRoot root ){
@@ -41,7 +40,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DClassInstantiation n ) {
-		expressionRoot = false;
 		visitAll( n.getArguments() );
 
 		Mapper.map( n.getArguments(), n.getParameters(), ( dNode, type ) -> {
@@ -64,14 +62,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DExpression n ) {
-		expressionRoot = false;
 		visitAll( n.getDependencies() );
 		return null;
 	}
 
 	@Override
 	public Void visit( DAssign n ) {
-		expressionRoot = false;
 		visit( n.getTarget() );
 		visit( n.getValue() );
 
@@ -96,7 +92,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DMethodCall n ) {
-		expressionRoot = false;
 		visitAll( n.getArguments() );
 
 		Mapper.map( n.getArguments(), n.getParameters(), ( dNode, type ) -> {
@@ -119,7 +114,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 
 	@Override
 	public Void visit( DReturn n ) {
-		expressionRoot = false;
 		if( n.getReturnNode() == null ){
 			return null;
 		}
@@ -170,7 +164,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 			resetHierarchy = true;
 			roleHierarchy.setRole( role );
 		}
-		expressionRoot = false;
 		roleHierarchy.goLeft();
 		visit( n.getLeft() );
 		roleHierarchy.goUp();
@@ -219,9 +212,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 	}
 
 	private void minCom( DBinaryExpression n ){
-		//boolean isRoot = expressionRoot;
-		expressionRoot = false;
-		visit( n.getLeft() );
 		visit( n.getRight() );
 		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
 		Role rightRole = n.getRight().getType().getRoles().get( 0 ).getCanonicalRole();
@@ -236,18 +226,12 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 		}else if( rightRole == leftRole ){
 			// both are fixed at the same role
 			role.coalesce( rightRole );
-		}//else if( isRoot ){
-			// If both are fixed at different roles,
-			// leave role unless it is the root of the expression.
-			//role.coalesce( leftRole );
-		//}
+		}
 
 		possibleUnfixedRoles.add( role );
 	}
 
 	private void minComPreferred( DBinaryExpression n ){
-		//boolean isRoot = expressionRoot;
-		expressionRoot = false;
 		visit( n.getLeft() );
 		visit( n.getRight() );
 		Role role = n.getType().getRoles().get( 0 ).getCanonicalRole();
@@ -319,7 +303,6 @@ public class GraphSolver implements DNodeVisitorInterface< Void > {
 	public Void visit( DRoot n ) {
 		possibleUnfixedRoles.clear();
 		for( DNode node: n.getNodes() ){
-			expressionRoot = true;
 			visit( node );
 			if( node.getType() != null && node.getType().getRoles().size() == 1 ) {
 				var finalRole = node.getType().getRoles().get( 0 ).getCanonicalRole();

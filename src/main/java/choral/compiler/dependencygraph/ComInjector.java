@@ -199,6 +199,14 @@ public class ComInjector extends ChoralVisitor {
 	}
 
 	@Override
+	public Node visit( NullExpression n ) {
+		if( n.worlds().size() >= 2 || isFixed( n.worlds().get( 0 ).name() ) ){
+			return n;
+		}
+		return new NullExpression( Collections.singletonList( createWorldArg( n ) ) );
+	}
+
+	@Override
 	public Node visit( LiteralExpression.IntegerLiteralExpression n ) {
 		if( isFixed( n.world().name() ) ){
 			return n;

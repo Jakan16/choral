@@ -44,5 +44,13 @@ public class Assign@( A, B, C ) {
         d = 4;
 
         a = b = c = d;
+
+        String@A nullString = null;
+        String nullString2 = null@A;
+        nullableParameter(null, null);
+	}
+
+	public String@A nullableParameter(String@B in, String@C in2){
+	    return null;
 	}
 }
